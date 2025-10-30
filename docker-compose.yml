@@ -1,0 +1,12 @@
+services:
+  r2u-ssh:
+    build: .
+    image: jmgirard/r2u-ssh:latest
+    ports:
+        - "127.0.0.1:${SSHPORT:-2222}:22"
+    environment:
+        - AUTHORIZED_KEYS_B64=${AUTHORIZED_KEYS_B64}
+    volumes:
+        - positron_cache:/home/rocker/.positron-server
+volumes:
+    positron_cache:
