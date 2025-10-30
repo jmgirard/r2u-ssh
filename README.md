@@ -30,8 +30,16 @@ Create a `.env` file at the repo root containing your base64-encoded public key:
 
 **macOS/Linux:**
 ```bash
-echo AUTHORIZED_KEYS_B64="$(base64 -w0 ~/.ssh/id_ed25519.pub)" > .env
-echo USERNAME=rocker >> .env
+{
+  echo -n "AUTHORIZED_KEYS_B64="
+  if base64 --help 2>&1 | grep -q '\-w'; then
+    base64 -w0 ~/.ssh/id_ed25519.pub
+  else
+    base64 < ~/.ssh/id_ed25519.pub | tr -d '\n'
+  fi
+  echo
+  echo "USERNAME=rocker"
+} > .env
 ```
 
 **Windows (PowerShell):**
