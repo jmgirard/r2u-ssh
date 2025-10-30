@@ -42,8 +42,6 @@ $base64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($pub))
 "USERNAME=rocker" | Out-File -Append -Encoding ascii .env
 ```
 
-> ✅ Do **not** commit `.env` to Git; it contains your personal key data.
-
 ## Step 4 - Build the image
 
 In terminal (bash/powershell):
