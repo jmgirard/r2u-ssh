@@ -2,6 +2,10 @@
 # Dockerfile: rocker-r2u with SSH server for Positron
 # ============================================================
 
+# ------------------------------------------------------------
+# 1. Load base image and define metadata labels
+# ------------------------------------------------------------
+
 FROM rocker/r2u:24.04
 
 LABEL org.opencontainers.image.title="r2u-ssh"
@@ -15,7 +19,7 @@ LABEL org.opencontainers.image.authors="Jeffrey M. Girard <jeffrey.m.girard@ku.e
 LABEL org.opencontainers.image.licenses="MIT"
 
 # ------------------------------------------------------------
-# 1. Create non-root user (rocker)
+# 2. Create non-root user (rocker)
 # ------------------------------------------------------------
 
 ARG USERNAME=rocker
@@ -24,7 +28,7 @@ RUN useradd -m -s /bin/bash ${USERNAME} \
     && install -d -m 700 -o ${USERNAME} -g ${USERNAME} /home/${USERNAME}/.ssh
 
 # ------------------------------------------------------------
-# 2. Install OpenSSH server
+# 3. Install OpenSSH server
 # ------------------------------------------------------------
 
 RUN apt-get update \
@@ -35,7 +39,7 @@ RUN apt-get update \
     && mkdir -p /var/run/sshd
 
 # ------------------------------------------------------------
-# 3. Configure sshd (key-only authentication)
+# 4. Configure sshd (key-only authentication)
 # ------------------------------------------------------------
 
 RUN printf "%s\n" \
@@ -52,7 +56,7 @@ RUN printf "%s\n" \
     > /etc/ssh/sshd_config.d/zz-container.conf
 
 # ------------------------------------------------------------
-# 4. Boot script: sets up keys, permissions, and runs sshd
+# 5. Boot script: sets up keys, permissions, and runs sshd
 # ------------------------------------------------------------
 
 RUN printf '%s\n' \ 
@@ -83,7 +87,7 @@ RUN printf '%s\n' \
     && chmod +x /usr/local/bin/boot-sshd.sh
 
 # ------------------------------------------------------------
-# 5. Set up bspm and permissions
+# 6. Set up bspm and permissions
 # ------------------------------------------------------------
 
 # Install sudo 
@@ -106,7 +110,7 @@ RUN mkdir -p /home/${USERNAME} \
     && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}
 
 # ------------------------------------------------------------
-# 6. Expose SSH port and set default command
+# Expose SSH port and set default command
 # ------------------------------------------------------------
 
 EXPOSE 22
