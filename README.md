@@ -1,6 +1,6 @@
 # r2u-ssh
 
-This repository builds a Docker image based on **`rocker/r2u`** that enables:
+This repository builds a Docker image based on [rocker/r2u](https://github.com/rocker-org/r2u) that enables:
 
 - SSH access using a **base64-encoded** public key via `AUTHORIZED_KEYS_B64`
 - `sudo` installed and configured (NOPASSWD) for the main user
