@@ -23,6 +23,7 @@ In terminal (bash/powershell):
 ```
 ssh-keygen -t ed25519 -C "your_email@example.com"
 ```
+Hit enter/return to accept all defaults
 
 ## Step 3 - Encode your public key
 
