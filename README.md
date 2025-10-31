@@ -7,6 +7,8 @@ This repository builds a Docker image based on [rocker/r2u](https://github.com/r
 - `bspm` enabled in R with the sudo backend
 - A minimal boot script (`boot-sshd.sh`) that prepares `~/.ssh` and starts `sshd`
 
+The primary purpose of this image is to enable an R environment with Ubuntu Binaries to run in Positron via SSH.
+
 ---
 
 ## Step 1 - Clone this repository
