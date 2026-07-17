@@ -2,5 +2,7 @@
 .gitignore
 .env
 cairn/
+test/
 README.md
+CHANGELOG.md
 docker-compose.yml

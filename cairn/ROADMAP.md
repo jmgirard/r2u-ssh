@@ -9,7 +9,7 @@ _Last hygiene check: 2026-07-17_
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M01 | Runtime contract cleanup | planned | — | normal | milestones/M01-contract-cleanup.md |
+| M01 | Runtime contract cleanup | review | — | normal | milestones/M01-contract-cleanup.md |
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->
@@ -18,3 +18,5 @@ _Last hygiene check: 2026-07-17_
 - GHCR release setup: buildx multi-arch (amd64+arm64) + base-digest recording — added 2026-07-17 — D-001
 - CI build workflow: hadolint + docker build on push/PR — added 2026-07-17 — PROFILE test-doctrine; mitigates platform-biased testing
 - Untrack the build-context `.DS_Store` (tracked + not in .dockerignore) — added 2026-07-17 — consistency-gate drift
+- Mount-source smoke coverage: exercise /keys/authorized_keys branch + mount-wins precedence — added 2026-07-17 — M01 review F1
+- Verify README Windows PowerShell .env recipe on real Windows (M01 AC4 deferred) — added 2026-07-17 — M01 AC4

@@ -22,15 +22,14 @@ LABEL org.opencontainers.image.licenses="MIT"
 # 2. Create non-root user (rocker)
 # ------------------------------------------------------------
 
-ARG USERNAME=rocker
-
-RUN useradd -m -s /bin/bash ${USERNAME} \
-    && install -d -m 700 -o ${USERNAME} -g ${USERNAME} /home/${USERNAME}/.ssh
+RUN useradd -m -s /bin/bash rocker \
+    && install -d -m 700 -o rocker -g rocker /home/rocker/.ssh
 
 # ------------------------------------------------------------
 # 3. Install OpenSSH server
 # ------------------------------------------------------------
 
+# hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         openssh-server curl wget ca-certificates tar gzip xz-utils \
@@ -51,63 +50,39 @@ RUN printf "%s\n" \
     "ChallengeResponseAuthentication no" \
     "PubkeyAuthentication yes" \
     "UsePAM yes" \
-    "AllowUsers ${USERNAME}" \
+    "AllowUsers rocker" \
     "AuthorizedKeysFile .ssh/authorized_keys" \
     > /etc/ssh/sshd_config.d/zz-container.conf
 
 # ------------------------------------------------------------
-# 5. Boot script: sets up keys, permissions, and runs sshd
+# 5. Boot script: installs the key, prepares dirs, runs sshd
 # ------------------------------------------------------------
 
-RUN printf '%s\n' \ 
-    '#!/usr/bin/env bash' \ 
-    'set -euo pipefail' \ 
-    'USER="${USERNAME:-rocker}"' \ 
-    'HOME_DIR="$(getent passwd "$USER" | cut -d: -f6)"' \ 
-    'if [[ -z "${HOME_DIR:-}" || ! -d "$HOME_DIR" ]]; then' \ 
-    ' echo "ERROR: Cannot resolve home for user $USER"; exit 1;' \ 
-    'fi' \ 
-    'install -d -m 755 -o "$USER" -g "$USER" "$HOME_DIR"' \ 
-    'install -d -m 700 -o "$USER" -g "$USER" "$HOME_DIR/.ssh"' \ 
-    'install -d -m 755 -o "$USER" -g "$USER" "$HOME_DIR/.positron-server"' \ 
-    'KEYDST="$HOME_DIR/.ssh/authorized_keys"' \ 
-    'if [[ -f /keys/authorized_keys ]]; then' \ 
-    ' cp /keys/authorized_keys "$KEYDST"' \ 
-    'elif [[ -n "${AUTHORIZED_KEYS_B64:-}" ]]; then' \ 
-    ' echo "$AUTHORIZED_KEYS_B64" | base64 -d > "$KEYDST"' \ 
-    'else' \ 
-    ' echo "Warning: No authorized_keys provided; SSH may refuse connections."' \ 
-    'fi' \ 
-    'chown -R "$USER:$USER" "$HOME_DIR/.ssh" "$HOME_DIR/.positron-server" || true' \ 
-    'chmod 700 "$HOME_DIR/.ssh"' \ 
-    'if [[ -f "$KEYDST" ]]; then chmod 600 "$KEYDST"; fi' \ 
-    'echo "Starting sshd..."' \ 
-    'exec /usr/sbin/sshd -D -e' \ 
-    > /usr/local/bin/boot-sshd.sh \ 
-    && chmod +x /usr/local/bin/boot-sshd.sh
+COPY --chmod=0755 boot-sshd.sh /usr/local/bin/boot-sshd.sh
 
 # ------------------------------------------------------------
 # 6. Set up bspm and permissions
 # ------------------------------------------------------------
 
-# Install sudo 
-RUN apt-get update \ 
-    && apt-get install -y --no-install-recommends sudo \ 
-    && rm -rf /var/lib/apt/lists/* 
+# Install sudo
+# hadolint ignore=DL3008
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends sudo \
+    && rm -rf /var/lib/apt/lists/*
 
-# Allow passwordless sudo for the SSH user 
-RUN usermod -aG sudo "$USERNAME" \ 
-    && printf "%s\n" "$USERNAME ALL=(ALL) NOPASSWD: ALL" \ 
-        > /etc/sudoers.d/90-bspm \ 
-    && chmod 440 /etc/sudoers.d/90-bspm 
+# Allow passwordless sudo for the SSH user
+RUN usermod -aG sudo rocker \
+    && printf "%s\n" "rocker ALL=(ALL) NOPASSWD: ALL" \
+        > /etc/sudoers.d/90-bspm \
+    && chmod 440 /etc/sudoers.d/90-bspm
 
-# Enable bspm and use sudo backend inside R 
-RUN sed -i '/suppressMessages(bspm::enable())/i options(bspm.sudo = TRUE)' \ 
-    /etc/R/Rprofile.site 
-    
-# Ensure SSH user owns its home so Positron can install the remote server 
-RUN mkdir -p /home/${USERNAME} \ 
-    && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}
+# Enable bspm and use sudo backend inside R
+RUN sed -i '/suppressMessages(bspm::enable())/i options(bspm.sudo = TRUE)' \
+    /etc/R/Rprofile.site
+
+# Ensure SSH user owns its home so Positron can install the remote server
+RUN mkdir -p /home/rocker \
+    && chown -R rocker:rocker /home/rocker
 
 # ------------------------------------------------------------
 # Expose SSH port and set default command
