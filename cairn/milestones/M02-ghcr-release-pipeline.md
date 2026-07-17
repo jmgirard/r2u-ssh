@@ -88,7 +88,7 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
       image" note: `docker compose pull && docker compose up -d` (convenience,
       may lag) vs `--build` (primary, fresher). Identical commands on both OSes.
       Add the CHANGELOG "Added: prebuilt multi-arch image on GHCR" entry.
-- [ ] T4: Verify `docker buildx build --platform linux/amd64,linux/arm64 .`
+- [x] T4: Verify `docker buildx build --platform linux/amd64,linux/arm64 .`
       builds both arches (QEMU on Apple Silicon); capture output as AC2 evidence.
       No push (`--output type=cacheonly` or `push=false`).
 - [ ] T5: `cairn/PROFILE.md` release-walk — add: resolve the base digest
@@ -109,6 +109,9 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
 - 2026-07-17: T3 — README "Alternative: use the prebuilt image" note (pull vs
   --build, clone+build fresher; identical commands on macOS/Windows); CHANGELOG
   GHCR-availability entry added.
+- 2026-07-17: T4 — `docker buildx build --builder mybuilder --platform
+  linux/amd64,linux/arm64 --output type=cacheonly .` exits 0; both arches built
+  (amd64 via QEMU). Build-only, no push. (AC2)
 
 ## Decisions
 
