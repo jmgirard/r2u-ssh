@@ -73,16 +73,16 @@ the authorized-key install path against cross-platform CR/BOM corruption.
 
 ## Tasks
 
-- [ ] **T1 — Remove USERNAME.** In `Dockerfile`, drop `ARG USERNAME` (line 25)
+- [x] **T1 — Remove USERNAME.** In `Dockerfile`, drop `ARG USERNAME` (line 25)
       and hardcode `rocker` at lines 27–28, 54, 99–100, 109–110; in the boot
       script (lines 62–87) change `USER="${USERNAME:-rocker}"` to `USER="rocker"`.
       Confirm `docker-compose.yml` references no USERNAME. Build to confirm.
-- [ ] **T2 — Fail closed.** In the boot script, replace the no-key warning branch
+- [x] **T2 — Fail closed.** In the boot script, replace the no-key warning branch
       with a clear error + `exit 1`; remove `|| true` from the chown line.
-- [ ] **T3 — Sanitize key install.** In the boot script, pipe both the mount copy
+- [x] **T3 — Sanitize key install.** In the boot script, pipe both the mount copy
       and the base64 decode through `tr -d '\r'` and guarantee a single trailing
       newline in `authorized_keys`.
-- [ ] **T4 — Smoke/regression harness.** Add a committed smoke test that builds
+- [x] **T4 — Smoke/regression harness.** Add a committed smoke test that builds
       the image and asserts: keyless run exits non-zero with the error; keyed run
       starts sshd, connects over SSH as `rocker`, and installs a package via
       `bspm`; a CRLF-contaminated `AUTHORIZED_KEYS_B64` yields a clean
@@ -97,7 +97,21 @@ the authorized-key install path against cross-platform CR/BOM corruption.
 ## Work log
 
 - 2026-07-17: created by /milestone-plan.
+- 2026-07-17: began implement; status in-progress, branch m01-contract-cleanup.
+- 2026-07-17: T1–T3 — rewrote boot script as COPY'd boot-sshd.sh (hardcode rocker,
+  fail-closed on no/empty key, strip CR + one trailing newline); Dockerfile drops
+  USERNAME, cleaned continuations. hadolint + shellcheck clean; docker build OK.
+- 2026-07-17: T4 — added test/smoke.sh (9 checks: build, fail-closed, SSH-as-rocker,
+  bspm install, CRLF sanitization); full suite green. Added test/ to .dockerignore.
 
 ## Decisions
+
+### 2026-07-17 (T1–T3): Boot script extracted to a COPY'd file
+
+Moved the boot script from an inline printf-generated block in the Dockerfile to
+a standalone `boot-sshd.sh` COPY'd to `/usr/local/bin/`. The inline form used
+fragile backslash-space line continuations and could not be shellcheck'd; a real
+file is lintable and testable. The entrypoint path is unchanged, so the runtime
+contract (IP3) is unaffected.
 
 ## Review
