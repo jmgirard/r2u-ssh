@@ -91,7 +91,7 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
 - [x] T4: Verify `docker buildx build --platform linux/amd64,linux/arm64 .`
       builds both arches (QEMU on Apple Silicon); capture output as AC2 evidence.
       No push (`--output type=cacheonly` or `push=false`).
-- [ ] T5: `cairn/PROFILE.md` release-walk — add: resolve the base digest
+- [x] T5: `cairn/PROFILE.md` release-walk — add: resolve the base digest
       (`docker buildx imagetools inspect rocker/r2u:24.04`), pass it as
       `--build-arg BASE_DIGEST`, record it in the GitHub release notes, and push
       multi-arch `:v0.1.0` + `:latest`. Keep within the 120-line PROFILE cap.
@@ -112,6 +112,9 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
 - 2026-07-17: T4 — `docker buildx build --builder mybuilder --platform
   linux/amd64,linux/arm64 --output type=cacheonly .` exits 0; both arches built
   (amd64 via QEMU). Build-only, no push. (AC2)
+- 2026-07-17: T5 — PROFILE release-walk now resolves + records the base digest
+  (imagetools inspect → --build-arg BASE_DIGEST) and pushes multi-arch
+  :v<version> + :latest to GHCR via one `buildx build --push`. 116/120 lines.
 
 ## Decisions
 
