@@ -88,8 +88,10 @@ if wait_for_ssh "$PORT"; then
   # bspm intercepts install.packages() and pulls the apt binary (r-cran-uuid).
   # Capture to a variable (not a pipe) so pipefail + grep's early exit can't
   # turn a successful install into a false failure.
-  BSPM_OUT="$(ssh_run "$PORT" 'Rscript -e "install.packages(\"uuid\"); library(uuid); cat(nchar(UUIDgenerate()))" 2>&1' || true)"
-  if grep -q "36" <<<"$BSPM_OUT"; then
+  # Assert an isolated sentinel (NCHAR=36) rather than a bare "36", which apt/R
+  # chatter could match incidentally.
+  BSPM_OUT="$(ssh_run "$PORT" 'Rscript -e "install.packages(\"uuid\"); library(uuid); cat(paste0(\"NCHAR=\", nchar(UUIDgenerate())))" 2>&1' || true)"
+  if grep -q "NCHAR=36" <<<"$BSPM_OUT"; then
     ok "bspm installs a binary R package (uuid)"
   else
     bad "bspm install of uuid failed; tail: $(tail -c 120 <<<"$BSPM_OUT")"

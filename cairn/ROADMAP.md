@@ -18,3 +18,4 @@ _Last hygiene check: 2026-07-17_
 - GHCR release setup: buildx multi-arch (amd64+arm64) + base-digest recording — added 2026-07-17 — D-001
 - CI build workflow: hadolint + docker build on push/PR — added 2026-07-17 — PROFILE test-doctrine; mitigates platform-biased testing
 - Untrack the build-context `.DS_Store` (tracked + not in .dockerignore) — added 2026-07-17 — consistency-gate drift
+- Mount-source smoke coverage: exercise /keys/authorized_keys branch + mount-wins precedence — added 2026-07-17 — M01 review F1

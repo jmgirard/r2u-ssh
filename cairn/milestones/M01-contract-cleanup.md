@@ -115,6 +115,8 @@ the authorized-key install path against cross-platform CR/BOM corruption.
   format) resolved by reformatting principle lines + updating stale
   Architecture/Known-issues to post-M01 reality (user-approved); cairn_validate
   now clean.
+- 2026-07-17: reviewer fan-out — F3 (82) fixed (smoke.sh sentinel assertion),
+  suite 9/9; F1 (68)→candidate, F2 (25)→no action. Blame/prior-PR clean.
 
 ## Decisions
 
@@ -162,3 +164,20 @@ output used an unparseable format); GP5's stale "in violation" note removed
 (M01 satisfies it); Architecture "Key input"/"User" and Known-issues entries
 updated to the post-M01 reality (USERNAME dead + boot-fails-open resolved; .env
 fragility now mitigated).
+
+**Fresh-context reviewer fan-out (3 lenses + scorer):**
+- diff-bug [O]: 3 findings · blame-history [S]: none · prior-PR [S]: no
+  prior-PR evidence (PR #1 is the first).
+- **Actioned (score ≥ 80):** F3 (82) — the bspm/IP3 check grepped a bare "36"
+  over merged output (false-pass risk); fixed to assert an isolated sentinel
+  `NCHAR=36` (test/smoke.sh). Suite re-run 9/9 green.
+- **Excluded (score < 80), logged not dropped:**
+  - F1 (68) — smoke.sh exercises only the env-var key source, never the
+    `/keys/authorized_keys` mount branch or mount-wins precedence. Real
+    coverage gap but not required by AC4/T4 evidence → follow-up candidate
+    "mount-source smoke coverage".
+  - F2 (25) — claim that CHANGELOG "CRLF .env" wording mismatches the
+    post-decode `tr -d '\r'`. Scorer empirically disproved the premise: current
+    Docker strips the trailing `\r` from `.env` on both compose and
+    `--env-file`, and the real vector (CR in the pubkey bytes) is correctly
+    handled. Doc nitpick; no action.
