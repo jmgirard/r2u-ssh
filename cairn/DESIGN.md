@@ -80,27 +80,45 @@ The Dockerfile's numbered stages, each a distinct concern:
 
 ## Design Principles
 
-<!-- Interview in progress: Phase 1 (facts) complete 2026-07-17; Phase 2
-     (principles) pending. The ledger below holds banked proto-principles —
-     candidates only, no commitments yet. Phase 2 replaces this block with
-     the formalized IP/GP set. -->
+_Settled by the 2026-07-17 design interview. IP = inviolable (changing one
+requires a user decision recorded as a D-entry); GP = guiding (tradeable with
+stated justification). Numbers are never reused or renumbered._
 
-### Banked candidates (Phase 2 pending)
+- **IP1 — Key-only SSH authentication.** Password and interactive auth are
+  never enabled; root login stays disabled. No convenience feature may weaken
+  this.
+- **IP2 — No secrets at rest.** The authorized key and any future credential
+  arrive only at runtime (env var or mount). Nothing sensitive is ever baked
+  into an image layer, passed as a build arg, committed to git, or COPY'd into
+  the build context.
+- **IP3 — The core contract never breaks.** Out of the box, Positron connects
+  over SSH and bspm installs binary R packages fast, on every default-branch
+  build. This protects the capability, not today's spellings — env var names
+  and the entrypoint path may change while the interface is 0.x-fluid (GP3);
+  a main that can't do the job may not ship.
 
-1. Key-only SSH authentication — password auth is never enabled.
-2. Trusted-local-user threat model — localhost bind by default; NOPASSWD sudo
-   is by-design under that model; docs warn against exposure rather than harden.
-3. Positron remoting is contractual — a Positron remote-server breakage against
-   this image is a bug here, not upstream's problem.
-4. Minimal image with a day-one-universal extras bar.
-5. Honest versioning — the version label never promises more stability than the
-   maintainer intends (currently: 0.x, fluid interface).
-6. Always-fresh primary channel — clone+build tracks upstream r2u; the registry
-   tag is a convenience that may lag; releases record their base digest.
-7. Cross-platform copy-pasteable docs (macOS + Windows PowerShell).
-8. Fail loudly at startup — misconfiguration should surface as a clean boot
-   error, not a confusing SSH failure later (candidate direction drawn from the
-   confirmed fail-open wart).
+- **GP1 — Trusted-local-user threat model.** The image serves one trusted
+  keyholder on localhost: default bind 127.0.0.1, NOPASSWD sudo by design;
+  docs warn against exposure rather than the image hardening for it.
+- **GP2 — Day-one-universal extras bar.** A tool is baked in only if
+  essentially every Positron R user needs it in their first session (git
+  clears the bar; quarto waits). The default answer to "add X" is bspm/apt at
+  runtime.
+- **GP3 — Honest versioning.** The version label never promises more stability
+  than intended: 0.x while the runtime interface is fluid; 1.0 is the
+  deliberate event of freezing the env contract.
+- **GP4 — Always-fresh primary channel.** Clone+build against the moving
+  `rocker/r2u:24.04` tag is the authoritative path; the GHCR tag is a
+  convenience that may lag; each release records the base digest it was built
+  from.
+- **GP5 — Fail loudly at startup.** A misconfigured container stops with a
+  clear error at boot rather than starting sshd and failing confusingly later.
+  (Adopted with the current boot script in violation — see Known issues.)
+- **GP6 — Cross-platform copy-paste docs.** Every README recipe works verbatim
+  on macOS and Windows PowerShell; platform-specific steps ship both variants.
+- **GP7 — Works with defaults.** The only input a user must supply is their
+  public key; every other knob has a working default. New features must not
+  add required configuration.
 
 ## Architecture
 
@@ -124,13 +142,15 @@ Confirmed by the maintainer (2026-07-17 design interview):
 - **USERNAME plumbing is dead.** The README has users put `USERNAME=rocker` in
   `.env`, but docker-compose.yml passes it neither as a build arg nor a runtime
   env — it silently does nothing, and a non-default name would half-break (user
-  baked at build; boot script reads runtime env).
+  baked at build; boot script reads runtime env). Resolution decided: drop the
+  knob and hardcode `rocker` (D-002); not yet implemented.
 - **`.env` encoding fragility.** The base64/.env recipe has bitten before
   (commit 6f92879 "Fix cross-platform env creation"): PowerShell encodings,
   BOMs, trailing newlines in the key.
 - **Boot script fails open.** With no key provided it warns but starts sshd
   anyway, and `chown … || true` swallows permission errors — misconfigurations
-  surface as confusing SSH failures later, not clean startup errors.
+  surface as confusing SSH failures later, not clean startup errors. Violates
+  GP5; alignment is a ROADMAP candidate.
 - **Platform-biased testing.** Daily testing is the maintainer's Apple Silicon
   Mac; the Windows/PowerShell path and plain-amd64 servers are exercised mainly
   by README followers — the audience least equipped to debug.
