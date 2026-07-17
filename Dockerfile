@@ -8,15 +8,23 @@
 
 FROM rocker/r2u:24.04
 
+# Base-image provenance. base.name is the moving tag we track (GP4); base.digest
+# is the digest that tag resolved to at build time, passed at release build
+# (empty on local/dev builds). BASE_DIGEST is public provenance, not a secret —
+# it is deliberately NOT the kind of value IP2 forbids as a build arg.
+ARG BASE_DIGEST=""
+
 LABEL org.opencontainers.image.title="r2u-ssh"
 LABEL org.opencontainers.image.description="r2u environment with SSH access"
-LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.version="0.1.0"
 LABEL org.opencontainers.image.url="https://github.com/jmgirard/r2u-ssh"
 LABEL org.opencontainers.image.documentation="https://github.com/jmgirard/r2u-ssh/blob/main/README.md"
 LABEL org.opencontainers.image.source="https://github.com/jmgirard/r2u-ssh"
 LABEL org.opencontainers.image.vendor="Jeffrey M. Girard"
 LABEL org.opencontainers.image.authors="Jeffrey M. Girard <jeffrey.m.girard@ku.edu>"
 LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.base.name="rocker/r2u:24.04"
+LABEL org.opencontainers.image.base.digest="${BASE_DIGEST}"
 
 # ------------------------------------------------------------
 # 2. Create non-root user (rocker)

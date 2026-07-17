@@ -75,7 +75,7 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
 
 ## Tasks
 
-- [ ] T1: In `Dockerfile:13` change `version="1.0.0"` → `"0.1.0"`; add
+- [x] T1: In `Dockerfile:13` change `version="1.0.0"` → `"0.1.0"`; add
       `org.opencontainers.image.base.name="rocker/r2u:24.04"` and a
       `.base.digest="${BASE_DIGEST}"` label fed by `ARG BASE_DIGEST=""` (empty
       default). BASE_DIGEST is public provenance, not a secret — IP2 is about
@@ -101,6 +101,9 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
 ## Work log
 
 - 2026-07-17: created by /milestone-plan.
+- 2026-07-17: T1 — Dockerfile version 1.0.0→0.1.0, added base.name/base.digest
+  labels (ARG BASE_DIGEST); CHANGELOG updated. hadolint clean (via docker image),
+  build OK, inspect confirms version=0.1.0, base.name set, digest arg populates.
 
 ## Decisions
 
