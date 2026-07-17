@@ -3,7 +3,7 @@
      Per-section owners are tagged below. -->
 # M02: GHCR release pipeline
 
-- **Status:** in-progress   <!-- owner: transitioning skill · mirror-update; cairn/ROADMAP.md is the authority -->
+- **Status:** review   <!-- owner: transitioning skill · mirror-update; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- owner: plan · create/amend-via-gate; high | normal | low -->
 - **Depends on:** —   <!-- owner: plan · create/amend-via-gate; M<xx>, M<yy> or — -->
 - **Principles touched:** GP3, GP4, GP6   <!-- owner: plan · create/amend-via-gate -->
@@ -95,7 +95,7 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
       (`docker buildx imagetools inspect rocker/r2u:24.04`), pass it as
       `--build-arg BASE_DIGEST`, record it in the GitHub release notes, and push
       multi-arch `:v0.1.0` + `:latest`. Keep within the 120-line PROFILE cap.
-- [ ] T6: `test/smoke.sh` — add label assertions via `docker inspect`: OCI
+- [x] T6: `test/smoke.sh` — add label assertions via `docker inspect`: OCI
       `version` == `0.1.0` and `base.name` present. Run the full smoke suite.
 
 ## Work log
@@ -115,6 +115,8 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
 - 2026-07-17: T5 — PROFILE release-walk now resolves + records the base digest
   (imagetools inspect → --build-arg BASE_DIGEST) and pushes multi-arch
   :v<version> + :latest to GHCR via one `buildx build --push`. 116/120 lines.
+- 2026-07-17: T6 — smoke.sh asserts version=0.1.0 + base.name label; full suite
+  11/11 pass. All tasks done → status review.
 
 ## Decisions
 
