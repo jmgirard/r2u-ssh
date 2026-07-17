@@ -34,3 +34,16 @@ README `.env` line); the non-root user is `rocker`, full stop. Fixing the
 plumbing end-to-end was considered and declined — the knob has no known users.
 **Consequences:** The contract shrinks before the 1.0 freeze (GP3, GP7); a
 future rename request reopens this via a new D-entry.
+
+### D-003 (2026-07-17): Bake git into the image — first day-one-universal extra
+
+**Context:** GP2's extras bar names git as clearing the day-one-universal
+threshold ("git clears the bar (not yet added)"), but git was never installed —
+the Dockerfile ships none. Adding an apt package is a dependency change requiring
+this gate.
+**Decision:** Install the `git` binary as a baked-in day-one-universal tool.
+Binary only — no git-lfs, no seeded global config (per-user runtime concern,
+GP7). git-lfs, quarto, and texlive stay out, awaiting demonstrated demand (GP2).
+**Consequences:** Every build carries git; the dependency surface grows by one
+apt package. DESIGN's extras bar and GP2 example text update to reflect git as
+added. A future request to bake in another tool reopens the bar via a new D-entry.
