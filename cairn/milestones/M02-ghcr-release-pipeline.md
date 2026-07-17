@@ -81,7 +81,7 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
       default). BASE_DIGEST is public provenance, not a secret — IP2 is about
       secrets/credentials, so a non-secret provenance build arg does not violate
       it. Add the CHANGELOG entries (version relabel; base-provenance labels).
-- [ ] T2: `docker-compose.yml:4` — change `image: jmgirard/r2u-ssh:latest` →
+- [x] T2: `docker-compose.yml:4` — change `image: jmgirard/r2u-ssh:latest` →
       `image: ghcr.io/jmgirard/r2u-ssh:latest`. `build: .` still builds locally;
       the tag just names the one authoritative registry image.
 - [ ] T3: `README.md` — near Step 4, add a short "Alternative: use the prebuilt
@@ -104,6 +104,8 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
 - 2026-07-17: T1 — Dockerfile version 1.0.0→0.1.0, added base.name/base.digest
   labels (ARG BASE_DIGEST); CHANGELOG updated. hadolint clean (via docker image),
   build OK, inspect confirms version=0.1.0, base.name set, digest arg populates.
+- 2026-07-17: T2 — compose image → ghcr.io/jmgirard/r2u-ssh:latest; `compose
+  config` validates; no stray Docker Hub image name remains.
 
 ## Decisions
 

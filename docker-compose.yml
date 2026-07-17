@@ -1,7 +1,7 @@
 services:
   r2u-ssh:
     build: .
-    image: jmgirard/r2u-ssh:latest
+    image: ghcr.io/jmgirard/r2u-ssh:latest
     ports:
         - "127.0.0.1:${SSHPORT:-2222}:22"
     environment:
