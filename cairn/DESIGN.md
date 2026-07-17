@@ -62,8 +62,8 @@ The Dockerfile's numbered stages, each a distinct concern:
 
 ## Conventions
 
-- **Versioning:** 0.x until the runtime interface settles; the current `1.0.0`
-  OCI label overstates the promise and should drop to 0.x. Reaching 1.0 is a
+- **Versioning:** 0.x until the runtime interface settles; the OCI version label
+  is `0.1.0`, honestly reflecting the pre-1.0 interface. Reaching 1.0 is a
   deliberate future event: the moment the env contract freezes. User-visible
   changes are recorded in `CHANGELOG.md` (declared in PROFILE.md).
 - **Base-image posture:** track the moving `rocker/r2u:24.04` tag so every

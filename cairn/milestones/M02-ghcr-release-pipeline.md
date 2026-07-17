@@ -7,7 +7,7 @@
 - **Priority:** normal   <!-- owner: plan · create/amend-via-gate; high | normal | low -->
 - **Depends on:** —   <!-- owner: plan · create/amend-via-gate; M<xx>, M<yy> or — -->
 - **Principles touched:** GP3, GP4, GP6   <!-- owner: plan · create/amend-via-gate -->
-- **Branch/PR:** m02-ghcr-release-pipeline   <!-- owner: implement (branch) / review (PR URL) · create -->
+- **Branch/PR:** m02-ghcr-release-pipeline · https://github.com/jmgirard/r2u-ssh/pull/2   <!-- owner: implement (branch) / review (PR URL) · create -->
 
 ## Goal
 
@@ -43,8 +43,10 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
 
 ## Acceptance criteria
 
-- [ ] The Dockerfile OCI `org.opencontainers.image.version` label reads `0.1.0`
-      (no `1.0.0` remaining anywhere in the repo). (GP3)
+- [ ] The Dockerfile OCI `org.opencontainers.image.version` label reads `0.1.0`;
+      no *live* `1.0.0` version label or stale claim that the current version is
+      1.0.0 remains (historical references describing the change — e.g. in
+      CHANGELOG — are fine). (GP3)   <!-- amended 2026-07-17 at review, see work log -->
 - [ ] `docker buildx build --platform linux/amd64,linux/arm64 .` completes
       successfully for both architectures with no push (evidence: buildx output).
 - [ ] The image carries `org.opencontainers.image.base.name=rocker/r2u:24.04`;
@@ -117,6 +119,11 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
   :v<version> + :latest to GHCR via one `buildx build --push`. 116/120 lines.
 - 2026-07-17: T6 — smoke.sh asserts version=0.1.0 + base.name label; full suite
   11/11 pass. All tasks done → status review.
+- 2026-07-17: review send-back — AC1 amended via gate (user-approved): narrowed
+  "no 1.0.0 anywhere" → "no live 1.0.0 label or stale current-version claim
+  (historical refs OK)" since CHANGELOG legitimately cites 1.0.0. Same check
+  caught a real defect: DESIGN.md Versioning still called 1.0.0 "the current OCI
+  label" — fixed to state the label is 0.1.0. Re-verified; back to review.
 
 ## Decisions
 
