@@ -35,23 +35,17 @@ Create a `.env` file at the repo root containing your base64-encoded public key:
 **macOS/Linux:**
 ```bash
 {
-  echo -n "AUTHORIZED_KEYS_B64="
-  if base64 --help 2>&1 | grep -q '\-w'; then
-    base64 -w0 ~/.ssh/id_ed25519.pub
-  else
-    base64 < ~/.ssh/id_ed25519.pub | tr -d '\n'
-  fi
-  echo
-  echo "USERNAME=rocker"
+  printf 'AUTHORIZED_KEYS_B64='
+  tr -d '\r\n' < ~/.ssh/id_ed25519.pub | base64 | tr -d '\n'
+  printf '\n'
 } > .env
 ```
 
 **Windows (PowerShell):**
 ```powershell
-$pub = Get-Content -Raw "$env:USERPROFILE\.ssh\id_ed25519.pub"
-$base64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($pub))
-"AUTHORIZED_KEYS_B64=$base64" | Out-File -Encoding ascii .env
-"USERNAME=rocker" | Out-File -Append -Encoding ascii .env
+$pub = (Get-Content -Raw "$env:USERPROFILE\.ssh\id_ed25519.pub").Trim()
+$b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($pub))
+"AUTHORIZED_KEYS_B64=$b64" | Out-File -FilePath .env -Encoding ascii -NoNewline
 ```
 
 ## Step 4 - Build the image

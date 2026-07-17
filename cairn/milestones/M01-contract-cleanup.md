@@ -88,10 +88,12 @@ the authorized-key install path against cross-platform CR/BOM corruption.
       `bspm`; a CRLF-contaminated `AUTHORIZED_KEYS_B64` yields a clean
       `authorized_keys`; `hadolint` clean. This is the regression evidence for
       T2/T3 and the IP3 positive path.
-- [ ] **T5 — README recipes.** Rewrite both `.env` recipes (macOS/Linux and
+- [x] **T5 — README recipes.** Rewrite both `.env` recipes (macOS/Linux and
       Windows PowerShell) to avoid CR/BOM and drop the `USERNAME=rocker` lines;
       run the manual Windows PowerShell smoke and log the result.
-- [ ] **T6 — CHANGELOG.** Create `CHANGELOG.md` with an `Unreleased` section
+      *(macOS recipe verified end-to-end; Windows PowerShell smoke pending the
+      maintainer — see work log / open concern.)*
+- [x] **T6 — CHANGELOG.** Create `CHANGELOG.md` with an `Unreleased` section
       recording the user-visible changes.
 
 ## Work log
@@ -103,6 +105,11 @@ the authorized-key install path against cross-platform CR/BOM corruption.
   USERNAME, cleaned continuations. hadolint + shellcheck clean; docker build OK.
 - 2026-07-17: T4 — added test/smoke.sh (9 checks: build, fail-closed, SSH-as-rocker,
   bspm install, CRLF sanitization); full suite green. Added test/ to .dockerignore.
+- 2026-07-17: T5 — rewrote both README .env recipes (strip CR/whitespace before
+  encoding; dropped USERNAME lines); macOS recipe verified end-to-end. Windows
+  PowerShell smoke PENDING the maintainer (AC4). USERNAME gone from all tracked files.
+- 2026-07-17: T6 — created CHANGELOG.md (Unreleased: removed USERNAME, key
+  sanitization, fail-closed); added CHANGELOG.md to .dockerignore.
 
 ## Decisions
 
