@@ -9,7 +9,7 @@ _Last hygiene check: 2026-07-17_
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M02 | GHCR release pipeline | planned | — | normal | milestones/M02-ghcr-release-pipeline.md |
+| M02 | GHCR release pipeline | review | — | normal | milestones/M02-ghcr-release-pipeline.md |
 | M01 | Runtime contract cleanup | done | — | normal | milestones/archive/M01-contract-cleanup.md |
 
 ## Candidates

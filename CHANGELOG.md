@@ -6,18 +6,29 @@ pre-1.0 its runtime interface may change between releases.
 
 ## [Unreleased]
 
+### Added
+
+- A prebuilt multi-architecture image (`linux/amd64` + `linux/arm64`) is now
+  published to the GitHub Container Registry as a convenience; the README shows
+  how to pull it instead of building. Building locally stays the fresher path.
+- Base-image provenance labels (`org.opencontainers.image.base.name` and
+  `.base.digest`) so a pulled image records which `rocker/r2u:24.04` digest it
+  was built from.
+
+### Changed
+
+- The image version label now reads `0.1.0` instead of `1.0.0`, honestly
+  reflecting that the runtime interface is still pre-1.0 and may change.
+- The authorized SSH key is now sanitized at boot — carriage returns from
+  CRLF/BOM-contaminated `.env` files are stripped and a single trailing newline
+  is guaranteed — so a Windows-authored key no longer fails silently.
+- The README `.env` recipes strip surrounding whitespace before encoding the key.
+
 ### Removed
 
 - The `USERNAME` setting. The SSH user is always `rocker`: the build no longer
   accepts a `USERNAME` build argument and the `.env` recipes no longer write a
   `USERNAME` line (it never took effect).
-
-### Changed
-
-- The authorized SSH key is now sanitized at boot — carriage returns from
-  CRLF/BOM-contaminated `.env` files are stripped and a single trailing newline
-  is guaranteed — so a Windows-authored key no longer fails silently.
-- The README `.env` recipes strip surrounding whitespace before encoding the key.
 
 ### Fixed
 

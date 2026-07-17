@@ -3,11 +3,11 @@
      Per-section owners are tagged below. -->
 # M02: GHCR release pipeline
 
-- **Status:** planned   <!-- owner: transitioning skill · mirror-update; cairn/ROADMAP.md is the authority -->
+- **Status:** review   <!-- owner: transitioning skill · mirror-update; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- owner: plan · create/amend-via-gate; high | normal | low -->
 - **Depends on:** —   <!-- owner: plan · create/amend-via-gate; M<xx>, M<yy> or — -->
 - **Principles touched:** GP3, GP4, GP6   <!-- owner: plan · create/amend-via-gate -->
-- **Branch/PR:** —   <!-- owner: implement (branch) / review (PR URL) · create -->
+- **Branch/PR:** m02-ghcr-release-pipeline · https://github.com/jmgirard/r2u-ssh/pull/2   <!-- owner: implement (branch) / review (PR URL) · create -->
 
 ## Goal
 
@@ -43,23 +43,25 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
 
 ## Acceptance criteria
 
-- [ ] The Dockerfile OCI `org.opencontainers.image.version` label reads `0.1.0`
-      (no `1.0.0` remaining anywhere in the repo). (GP3)
-- [ ] `docker buildx build --platform linux/amd64,linux/arm64 .` completes
+- [x] The Dockerfile OCI `org.opencontainers.image.version` label reads `0.1.0`;
+      no *live* `1.0.0` version label or stale claim that the current version is
+      1.0.0 remains (historical references describing the change — e.g. in
+      CHANGELOG — are fine). (GP3)   <!-- amended 2026-07-17 at review, see work log -->
+- [x] `docker buildx build --platform linux/amd64,linux/arm64 .` completes
       successfully for both architectures with no push (evidence: buildx output).
-- [ ] The image carries `org.opencontainers.image.base.name=rocker/r2u:24.04`;
+- [x] The image carries `org.opencontainers.image.base.name=rocker/r2u:24.04`;
       a build passing `--build-arg BASE_DIGEST=sha256:<d>` produces an image
       whose `.base.digest` label equals `<d>` (a local build with no arg leaves
       it empty). Verified via `docker inspect`.
-- [ ] The GHCR name `ghcr.io/jmgirard/r2u-ssh` appears in compose and docs with
+- [x] The GHCR name `ghcr.io/jmgirard/r2u-ssh` appears in compose and docs with
       no stray `jmgirard/r2u-ssh` (Docker Hub) name left; the release-walk
       documents the pinnable `:v0.1.0` tag. (D-001)
-- [ ] README documents both channels — clone+build (primary) and `docker compose
+- [x] README documents both channels — clone+build (primary) and `docker compose
       pull` (convenience) — including the "clone+build is fresher" note; both
       paths copy-paste on macOS and Windows PowerShell. (GP4, GP6)
-- [ ] `cairn/PROFILE.md` release-walk documents resolving + recording the base
+- [x] `cairn/PROFILE.md` release-walk documents resolving + recording the base
       digest and pushing multi-arch `:v0.1.0` + `:latest` at release. (D-001)
-- [ ] PROFILE `verify` clean: `hadolint Dockerfile` reports no violations,
+- [x] PROFILE `verify` clean: `hadolint Dockerfile` reports no violations,
       `docker build` succeeds, and `test/smoke.sh` passes (including the new
       version/base-name label assertions).
 
@@ -75,33 +77,99 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
 
 ## Tasks
 
-- [ ] T1: In `Dockerfile:13` change `version="1.0.0"` → `"0.1.0"`; add
+- [x] T1: In `Dockerfile:13` change `version="1.0.0"` → `"0.1.0"`; add
       `org.opencontainers.image.base.name="rocker/r2u:24.04"` and a
       `.base.digest="${BASE_DIGEST}"` label fed by `ARG BASE_DIGEST=""` (empty
       default). BASE_DIGEST is public provenance, not a secret — IP2 is about
       secrets/credentials, so a non-secret provenance build arg does not violate
       it. Add the CHANGELOG entries (version relabel; base-provenance labels).
-- [ ] T2: `docker-compose.yml:4` — change `image: jmgirard/r2u-ssh:latest` →
+- [x] T2: `docker-compose.yml:4` — change `image: jmgirard/r2u-ssh:latest` →
       `image: ghcr.io/jmgirard/r2u-ssh:latest`. `build: .` still builds locally;
       the tag just names the one authoritative registry image.
-- [ ] T3: `README.md` — near Step 4, add a short "Alternative: use the prebuilt
+- [x] T3: `README.md` — near Step 4, add a short "Alternative: use the prebuilt
       image" note: `docker compose pull && docker compose up -d` (convenience,
       may lag) vs `--build` (primary, fresher). Identical commands on both OSes.
       Add the CHANGELOG "Added: prebuilt multi-arch image on GHCR" entry.
-- [ ] T4: Verify `docker buildx build --platform linux/amd64,linux/arm64 .`
+- [x] T4: Verify `docker buildx build --platform linux/amd64,linux/arm64 .`
       builds both arches (QEMU on Apple Silicon); capture output as AC2 evidence.
       No push (`--output type=cacheonly` or `push=false`).
-- [ ] T5: `cairn/PROFILE.md` release-walk — add: resolve the base digest
+- [x] T5: `cairn/PROFILE.md` release-walk — add: resolve the base digest
       (`docker buildx imagetools inspect rocker/r2u:24.04`), pass it as
       `--build-arg BASE_DIGEST`, record it in the GitHub release notes, and push
       multi-arch `:v0.1.0` + `:latest`. Keep within the 120-line PROFILE cap.
-- [ ] T6: `test/smoke.sh` — add label assertions via `docker inspect`: OCI
+- [x] T6: `test/smoke.sh` — add label assertions via `docker inspect`: OCI
       `version` == `0.1.0` and `base.name` present. Run the full smoke suite.
 
 ## Work log
 
 - 2026-07-17: created by /milestone-plan.
+- 2026-07-17: T1 — Dockerfile version 1.0.0→0.1.0, added base.name/base.digest
+  labels (ARG BASE_DIGEST); CHANGELOG updated. hadolint clean (via docker image),
+  build OK, inspect confirms version=0.1.0, base.name set, digest arg populates.
+- 2026-07-17: T2 — compose image → ghcr.io/jmgirard/r2u-ssh:latest; `compose
+  config` validates; no stray Docker Hub image name remains.
+- 2026-07-17: T3 — README "Alternative: use the prebuilt image" note (pull vs
+  --build, clone+build fresher; identical commands on macOS/Windows); CHANGELOG
+  GHCR-availability entry added.
+- 2026-07-17: T4 — `docker buildx build --builder mybuilder --platform
+  linux/amd64,linux/arm64 --output type=cacheonly .` exits 0; both arches built
+  (amd64 via QEMU). Build-only, no push. (AC2)
+- 2026-07-17: T5 — PROFILE release-walk now resolves + records the base digest
+  (imagetools inspect → --build-arg BASE_DIGEST) and pushes multi-arch
+  :v<version> + :latest to GHCR via one `buildx build --push`. 116/120 lines.
+- 2026-07-17: T6 — smoke.sh asserts version=0.1.0 + base.name label; full suite
+  11/11 pass. All tasks done → status review.
+- 2026-07-17: review send-back — AC1 amended via gate (user-approved): narrowed
+  "no 1.0.0 anywhere" → "no live 1.0.0 label or stale current-version claim
+  (historical refs OK)" since CHANGELOG legitimately cites 1.0.0. Same check
+  caught a real defect: DESIGN.md Versioning still called 1.0.0 "the current OCI
+  label" — fixed to state the label is 0.1.0. Re-verified; back to review.
 
 ## Decisions
 
 ## Review
+
+_Reviewed 2026-07-17. PR #2. Base `main` even (0 behind)._
+
+### Acceptance-criteria evidence (fresh)
+
+- AC1 — `docker build` + `docker inspect` → version label `0.1.0`; grep confirms
+  no live `1.0.0` label or stale current-version claim remains (CHANGELOG /
+  milestone-file references are historical, allowed by the amended criterion;
+  DESIGN.md stale claim fixed during the send-back).
+- AC2 — `docker buildx build --builder mybuilder --platform
+  linux/amd64,linux/arm64 --output type=cacheonly .` exits 0; both arches built.
+- AC3 — `base.name=rocker/r2u:24.04`; local build → `base.digest` empty;
+  `--build-arg BASE_DIGEST=sha256:abc123` build → `base.digest=sha256:abc123`.
+- AC4 — compose + PROFILE name `ghcr.io/jmgirard/r2u-ssh`; no stray `image:
+  jmgirard/...` Docker Hub name; release-walk documents the pinnable `:v0.1.0`.
+- AC5 — README has both channels with the "clone+build is fresher" note; the
+  pull commands are identical on macOS and Windows PowerShell (GP6).
+- AC6 — PROFILE release-walk resolves the base digest, records it in release
+  notes, and pushes multi-arch `:v0.1.0` + `:latest` (now with builder + login
+  prerequisites — see F1).
+- AC7 — hadolint clean (via `hadolint/hadolint` image), `docker build` OK,
+  `test/smoke.sh` 11/11 pass (incl. the two new label assertions).
+
+### Consistency gate
+
+- `cairn_validate.py` — all checks pass (exit 0).
+- Toolchain (`docker-image` consistency-gate): `docker build` clean; hadolint no
+  violations; base image tag-pinned (`rocker/r2u:24.04`, not bare latest); no
+  secrets baked (BASE_DIGEST is public provenance); `.dockerignore` present;
+  CHANGELOG has the user-visible entries.
+- No principle text changed (GP3/GP4/GP6 worked under, not modified) →
+  `cairn_impact` skipped.
+
+### Independent review — 3 lenses + scorer
+
+- [O] diff-bug: 1 finding (F1 below) + 2 correctly-classified non-defects
+  (base-digest best-effort — by design under GP4; README advertises an image not
+  yet pushed — in scope, machinery-only). [S] blame-history: no findings. [S]
+  prior-PR-comments: no prior-PR evidence.
+- **F1 (scored 85 → actioned, FIXED):** PROFILE release-walk handoff command
+  omitted its prerequisites — a container-driver buildx builder (the default
+  `docker` driver can't build multi-arch) and `docker login ghcr.io` (else
+  `--push` 401s) — so the copy-paste procedure failed on a stock install. Fixed:
+  handoff now leads with `docker buildx create --use` + `docker login ghcr.io`.
+- Below-threshold findings: none.

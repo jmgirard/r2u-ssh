@@ -8,6 +8,8 @@
 #      and bspm installs a binary R package.
 #   4. Key sanitization (GP6): a CRLF-contaminated key yields an in-container
 #      authorized_keys with no CR and exactly one trailing newline.
+#   5. OCI labels (M02): honest 0.1.0 version (GP3) and base-image provenance
+#      name are present on the built image.
 #
 # Usage: test/smoke.sh [image-tag]   (default tag: r2u-ssh:smoke — built here)
 set -euo pipefail
@@ -38,6 +40,22 @@ free_port() {
 echo "== building $IMAGE =="
 docker build -t "$IMAGE" "$REPO_ROOT" >/dev/null
 ok "image builds"
+
+# --- Test 5: OCI labels (M02) ----------------------------------------------
+# Honest 0.x version (GP3) and base-image provenance name.
+echo "== OCI labels =="
+VER="$(docker inspect -f '{{index .Config.Labels "org.opencontainers.image.version"}}' "$IMAGE")"
+if [[ "$VER" == "0.1.0" ]]; then
+  ok "version label is 0.1.0"
+else
+  bad "version label is '$VER', expected 0.1.0"
+fi
+BASENAME="$(docker inspect -f '{{index .Config.Labels "org.opencontainers.image.base.name"}}' "$IMAGE")"
+if [[ "$BASENAME" == "rocker/r2u:24.04" ]]; then
+  ok "base.name label present"
+else
+  bad "base.name label is '$BASENAME', expected rocker/r2u:24.04"
+fi
 
 # --- Test 2: fail closed on no key -----------------------------------------
 echo "== fail-closed (no key) =="
