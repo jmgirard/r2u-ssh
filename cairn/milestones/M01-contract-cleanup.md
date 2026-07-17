@@ -117,6 +117,9 @@ the authorized-key install path against cross-platform CR/BOM corruption.
   now clean.
 - 2026-07-17: reviewer fan-out — F3 (82) fixed (smoke.sh sentinel assertion),
   suite 9/9; F1 (68)→candidate, F2 (25)→no action. Blame/prior-PR clean.
+- 2026-07-17: merge approved by user with AC4's Windows PowerShell smoke deferred
+  (explicit override of full AC4 fencing) — tracked as a ROADMAP candidate. No CI
+  workflow exists yet, so merged without CI at user request.
 
 ## Decisions
 
