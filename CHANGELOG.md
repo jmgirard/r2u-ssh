@@ -8,6 +8,9 @@ pre-1.0 its runtime interface may change between releases.
 
 ### Added
 
+- A prebuilt multi-architecture image (`linux/amd64` + `linux/arm64`) is now
+  published to the GitHub Container Registry as a convenience; the README shows
+  how to pull it instead of building. Building locally stays the fresher path.
 - Base-image provenance labels (`org.opencontainers.image.base.name` and
   `.base.digest`) so a pulled image records which `rocker/r2u:24.04` digest it
   was built from.

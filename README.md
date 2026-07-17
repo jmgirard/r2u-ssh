@@ -55,6 +55,18 @@ In terminal (bash/powershell):
 docker compose up -d --build
 ```
 
+**Alternative - use the prebuilt image.** Instead of building locally you can
+pull a prebuilt multi-architecture image (`linux/amd64` + `linux/arm64`) from
+the GitHub Container Registry:
+```
+docker compose pull
+docker compose up -d
+```
+The prebuilt image is a convenience and may lag behind the upstream
+`rocker/r2u` base. Building it yourself with `--build` (above) always tracks the
+current base, so it is the fresher path. These commands are identical on macOS
+and Windows PowerShell.
+
 ## Step 5 - Connect in Positron
 
 1. Open **Positron**
