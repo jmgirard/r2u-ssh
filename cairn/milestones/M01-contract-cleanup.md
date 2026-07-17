@@ -6,7 +6,7 @@
 - **Priority:** normal
 - **Depends on:** —
 - **Principles touched:** IP3, GP5, GP6, GP7
-- **Branch/PR:** m01-contract-cleanup
+- **Branch/PR:** m01-contract-cleanup · https://github.com/jmgirard/r2u-ssh/pull/1
 
 ## Goal
 
@@ -41,14 +41,14 @@ the authorized-key install path against cross-platform CR/BOM corruption.
 
 ## Acceptance criteria
 
-- [ ] **USERNAME knob gone.** `grep -i username` finds no match in `Dockerfile`,
+- [x] **USERNAME knob gone.** `grep -i username` finds no match in `Dockerfile`,
       the boot script, `README.md`, or `docker-compose.yml`; `docker build`
       succeeds and a started container's SSH user resolves to `rocker`
       (`getent passwd rocker` / `whoami` over SSH).
-- [ ] **Fail-closed.** A `docker run` with neither a mounted key nor
+- [x] **Fail-closed.** A `docker run` with neither a mounted key nor
       `AUTHORIZED_KEYS_B64` exits non-zero and prints an error naming the missing
       key; sshd is never started keyless; no `|| true` remains on the chown.
-- [ ] **Core contract intact (IP3).** With a key supplied, sshd starts, an SSH
+- [x] **Core contract intact (IP3).** With a key supplied, sshd starts, an SSH
       client connects as `rocker`, and `bspm` installs a binary R package — the
       cleanup did not break Positron-over-SSH + fast binary installs.
 - [ ] **Key sanitized + recipes fixed (GP6).** An `AUTHORIZED_KEYS_B64` whose
@@ -57,9 +57,9 @@ the authorized-key install path against cross-platform CR/BOM corruption.
       Linux); both README `.env` recipes are rewritten for macOS and Windows
       PowerShell; the maintainer's one-time manual Windows PowerShell smoke is
       run and logged in the work log.
-- [ ] **verify slot clean.** `hadolint Dockerfile` reports no violations and
+- [x] **verify slot clean.** `hadolint Dockerfile` reports no violations and
       `docker build` succeeds from a clean context.
-- [ ] **CHANGELOG entry.** `CHANGELOG.md` exists with an `Unreleased` section
+- [x] **CHANGELOG entry.** `CHANGELOG.md` exists with an `Unreleased` section
       listing these user-visible changes (no milestone numbers in the text).
 
 ## Coverage
@@ -110,6 +110,11 @@ the authorized-key install path against cross-platform CR/BOM corruption.
   PowerShell smoke PENDING the maintainer (AC4). USERNAME gone from all tracked files.
 - 2026-07-17: T6 — created CHANGELOG.md (Unreleased: removed USERNAME, key
   sanitization, fail-closed); added CHANGELOG.md to .dockerignore.
+- 2026-07-17: review — draft PR #1; fresh evidence AC1/2/3/5/6 PASS, AC4 partial
+  (Windows smoke pending). Gate FAIL on principles-slot (DESIGN.md unparseable
+  format) resolved by reformatting principle lines + updating stale
+  Architecture/Known-issues to post-M01 reality (user-approved); cairn_validate
+  now clean.
 
 ## Decisions
 
@@ -122,3 +127,38 @@ file is lintable and testable. The entrypoint path is unchanged, so the runtime
 contract (IP3) is unaffected.
 
 ## Review
+
+_2026-07-17. Evidence gathered fresh on the branch (docker 29.6.1, arm64)._
+
+**Per-criterion evidence:**
+- **AC1 (USERNAME gone) — PASS.** `git grep -in username` over Dockerfile,
+  boot-sshd.sh, docker-compose.yml, README.md → no match. `docker build` OK;
+  smoke "SSH user is rocker" PASS.
+- **AC2 (fail-closed) — PASS.** smoke: keyless run exits 1 and prints
+  "no authorized key provided"; boot-sshd.sh has no `|| true` on chown; also
+  fails closed on an empty decoded key.
+- **AC3 (core contract, IP3) — PASS.** smoke: sshd starts, SSH connects as
+  rocker, `install.packages("uuid")` pulls the r2u binary via bspm (UUID len 36).
+- **AC4 (key sanitized + recipes) — PARTIAL.** Automated Linux: CRLF-contaminated
+  `AUTHORIZED_KEYS_B64` → in-container authorized_keys with no CR and exactly one
+  trailing newline, SSH still connects (smoke PASS). Both README recipes
+  rewritten; macOS recipe verified end-to-end. **Windows PowerShell manual smoke
+  still PENDING the maintainer** — AC4 not fully fenced until that evidence lands.
+- **AC5 (verify slot) — PASS.** `hadolint Dockerfile` clean; `docker build` OK
+  from clean context; shellcheck clean on boot-sshd.sh and test/smoke.sh.
+- **AC6 (CHANGELOG) — PASS.** CHANGELOG.md present, 4 Unreleased entries, no
+  milestone numbers.
+
+**Consistency gate:** cairn_validate all pass (after the DESIGN.md principle
+reformat below); cairn_impact --changed reviewed — all principle citations
+remain valid (edits were format-only + removing GP5's now-satisfied "in
+violation" note). Toolchain gate: base image explicit-tagged (not bare latest);
+no secrets in ENV/COPY; .dockerignore excludes noise; CHANGELOG entry present.
+
+**DESIGN.md updated during review (approved by the user):** the 10 principle
+lines were reformatted from `- **IPn — …**` to `- IPn: **…**` so
+cairn_validate/cairn_impact can parse them (the repo's `/design-interview`
+output used an unparseable format); GP5's stale "in violation" note removed
+(M01 satisfies it); Architecture "Key input"/"User" and Known-issues entries
+updated to the post-M01 reality (USERNAME dead + boot-fails-open resolved; .env
+fragility now mitigated).
