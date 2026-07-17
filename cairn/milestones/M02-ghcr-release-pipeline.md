@@ -43,25 +43,25 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
 
 ## Acceptance criteria
 
-- [ ] The Dockerfile OCI `org.opencontainers.image.version` label reads `0.1.0`;
+- [x] The Dockerfile OCI `org.opencontainers.image.version` label reads `0.1.0`;
       no *live* `1.0.0` version label or stale claim that the current version is
       1.0.0 remains (historical references describing the change — e.g. in
       CHANGELOG — are fine). (GP3)   <!-- amended 2026-07-17 at review, see work log -->
-- [ ] `docker buildx build --platform linux/amd64,linux/arm64 .` completes
+- [x] `docker buildx build --platform linux/amd64,linux/arm64 .` completes
       successfully for both architectures with no push (evidence: buildx output).
-- [ ] The image carries `org.opencontainers.image.base.name=rocker/r2u:24.04`;
+- [x] The image carries `org.opencontainers.image.base.name=rocker/r2u:24.04`;
       a build passing `--build-arg BASE_DIGEST=sha256:<d>` produces an image
       whose `.base.digest` label equals `<d>` (a local build with no arg leaves
       it empty). Verified via `docker inspect`.
-- [ ] The GHCR name `ghcr.io/jmgirard/r2u-ssh` appears in compose and docs with
+- [x] The GHCR name `ghcr.io/jmgirard/r2u-ssh` appears in compose and docs with
       no stray `jmgirard/r2u-ssh` (Docker Hub) name left; the release-walk
       documents the pinnable `:v0.1.0` tag. (D-001)
-- [ ] README documents both channels — clone+build (primary) and `docker compose
+- [x] README documents both channels — clone+build (primary) and `docker compose
       pull` (convenience) — including the "clone+build is fresher" note; both
       paths copy-paste on macOS and Windows PowerShell. (GP4, GP6)
-- [ ] `cairn/PROFILE.md` release-walk documents resolving + recording the base
+- [x] `cairn/PROFILE.md` release-walk documents resolving + recording the base
       digest and pushing multi-arch `:v0.1.0` + `:latest` at release. (D-001)
-- [ ] PROFILE `verify` clean: `hadolint Dockerfile` reports no violations,
+- [x] PROFILE `verify` clean: `hadolint Dockerfile` reports no violations,
       `docker build` succeeds, and `test/smoke.sh` passes (including the new
       version/base-name label assertions).
 
@@ -128,3 +128,48 @@ docs — all pipeline-ready for a later manual `/cairn-release` push.
 ## Decisions
 
 ## Review
+
+_Reviewed 2026-07-17. PR #2. Base `main` even (0 behind)._
+
+### Acceptance-criteria evidence (fresh)
+
+- AC1 — `docker build` + `docker inspect` → version label `0.1.0`; grep confirms
+  no live `1.0.0` label or stale current-version claim remains (CHANGELOG /
+  milestone-file references are historical, allowed by the amended criterion;
+  DESIGN.md stale claim fixed during the send-back).
+- AC2 — `docker buildx build --builder mybuilder --platform
+  linux/amd64,linux/arm64 --output type=cacheonly .` exits 0; both arches built.
+- AC3 — `base.name=rocker/r2u:24.04`; local build → `base.digest` empty;
+  `--build-arg BASE_DIGEST=sha256:abc123` build → `base.digest=sha256:abc123`.
+- AC4 — compose + PROFILE name `ghcr.io/jmgirard/r2u-ssh`; no stray `image:
+  jmgirard/...` Docker Hub name; release-walk documents the pinnable `:v0.1.0`.
+- AC5 — README has both channels with the "clone+build is fresher" note; the
+  pull commands are identical on macOS and Windows PowerShell (GP6).
+- AC6 — PROFILE release-walk resolves the base digest, records it in release
+  notes, and pushes multi-arch `:v0.1.0` + `:latest` (now with builder + login
+  prerequisites — see F1).
+- AC7 — hadolint clean (via `hadolint/hadolint` image), `docker build` OK,
+  `test/smoke.sh` 11/11 pass (incl. the two new label assertions).
+
+### Consistency gate
+
+- `cairn_validate.py` — all checks pass (exit 0).
+- Toolchain (`docker-image` consistency-gate): `docker build` clean; hadolint no
+  violations; base image tag-pinned (`rocker/r2u:24.04`, not bare latest); no
+  secrets baked (BASE_DIGEST is public provenance); `.dockerignore` present;
+  CHANGELOG has the user-visible entries.
+- No principle text changed (GP3/GP4/GP6 worked under, not modified) →
+  `cairn_impact` skipped.
+
+### Independent review — 3 lenses + scorer
+
+- [O] diff-bug: 1 finding (F1 below) + 2 correctly-classified non-defects
+  (base-digest best-effort — by design under GP4; README advertises an image not
+  yet pushed — in scope, machinery-only). [S] blame-history: no findings. [S]
+  prior-PR-comments: no prior-PR evidence.
+- **F1 (scored 85 → actioned, FIXED):** PROFILE release-walk handoff command
+  omitted its prerequisites — a container-driver buildx builder (the default
+  `docker` driver can't build multi-arch) and `docker login ghcr.io` (else
+  `--push` 401s) — so the copy-paste procedure failed on a stock install. Fixed:
+  handoff now leads with `docker buildx create --use` + `docker login ghcr.io`.
+- Below-threshold findings: none.

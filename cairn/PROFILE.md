@@ -77,11 +77,13 @@ Followed by `/cairn-release` — a container-registry release (never self-pushes
 - Resolve the base digest (`docker buildx imagetools inspect rocker/r2u:24.04`).
   A multi-arch image can't be `--load`ed locally, so the release build and push
   are a single buildx step (the handoff below).
-- Handoff checklist (user runs): `docker buildx build --push --platform
-  linux/amd64,linux/arm64 --build-arg BASE_DIGEST=<digest> -t
+- Handoff checklist (user runs): once per machine, `docker buildx create --use`
+  (a container-driver builder — the default `docker` driver can't build
+  multi-arch) and `docker login ghcr.io`. Then `docker buildx build --push
+  --platform linux/amd64,linux/arm64 --build-arg BASE_DIGEST=<digest> -t
   ghcr.io/jmgirard/r2u-ssh:v<version> -t ghcr.io/jmgirard/r2u-ssh:latest .`;
-  confirm both tags, record the base digest in the GitHub release notes, then
-  tag the git commit `v<version>` and cut the GitHub release. cairn pushes nothing.
+  confirm both tags, record the base digest in the GitHub release notes, then tag
+  the git commit `v<version>` and cut the GitHub release. cairn pushes nothing.
 
 ## init-detection
 Recognized by `cairn-init` when a **`Dockerfile`** is present at the repo root
