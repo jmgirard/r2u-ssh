@@ -9,7 +9,7 @@ _Last hygiene check: 2026-07-17_
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M01 | Runtime contract cleanup | planned | — | normal | milestones/M01-contract-cleanup.md |
+| M01 | Runtime contract cleanup | in-progress | — | normal | milestones/M01-contract-cleanup.md |
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->

@@ -2,11 +2,11 @@
      section ownership". A phase skill never rewrites another phase's section. -->
 # M01: Runtime contract cleanup
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Principles touched:** IP3, GP5, GP6, GP7
-- **Branch/PR:** —
+- **Branch/PR:** m01-contract-cleanup
 
 ## Goal
 
