@@ -60,8 +60,8 @@ jobs:
           RUN_TS="$(date -u +%FT%TZ)"
           ARCH="${{ matrix.arch }}"
           OUT="probe-${ARCH}.csv"
-          # CSV header (recreated each run; artifact merge concatenates across runs).
-          echo "run_id,attempt,arch,utc,exit_code,http_code,time_connect,time_total,timed_out" > "$OUT"
+          # CSV header. run_id+run_attempt uniquely key each sample batch.
+          echo "run_id,run_attempt,attempt,arch,utc,exit_code,http_code,time_connect,time_total,timed_out" > "$OUT"
 
           fails=0
           declare -a connects=()
@@ -86,7 +86,7 @@ jobs:
               connects+=("$tc")
               echo "attempt $i: ok   http=$http connect=${tc}s total=${tt}s"
             fi
-            echo "${{ github.run_id }},$i,$ARCH,$ts,$ec,$http,$tc,$tt,$timed_out" >> "$OUT"
+            echo "${{ github.run_id }},${{ github.run_attempt }},$i,$ARCH,$ts,$ec,$http,$tc,$tt,$timed_out" >> "$OUT"
             [ "$i" -lt "$N" ] && sleep "$SLEEP"
           done
 
@@ -144,6 +144,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: probe-${{ matrix.arch }}-${{ github.run_id }}
+          name: probe-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: probe-${{ matrix.arch }}.csv
           if-no-files-found: warn
