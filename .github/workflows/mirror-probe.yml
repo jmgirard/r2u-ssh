@@ -28,10 +28,10 @@ on:
         description: "Parallel new connections in the burst step (apt-style fan-out)"
         required: false
         default: "50"
-      packages:
-        description: "r-cran packages for the bulk download-only step"
+      num_downloads:
+        description: "How many real r-cran .debs to fetch in the bulk step"
         required: false
-        default: "r-cran-tidyverse r-cran-data.table r-cran-devtools r-cran-shiny"
+        default: "40"
 
 # Endpoint mirrors what `apt-get update` hits via the rocker/r2u base source.
 env:
@@ -180,44 +180,51 @@ jobs:
       - name: Bulk r2u package fetch (download-only, real build analog)
         run: |
           set -u
-          # Closest analog to the failing build: point apt at r2u and download a
-          # batch of r-cran .debs, opening apt's real connection pattern. Classify
-          # any failure as a CONNECTION problem vs a MISSING-PACKAGE problem so an
-          # arm64 coverage gap is not mistaken for a mirror timeout.
-          PKGS="${{ inputs.packages }}"
-          PKGS="${PKGS:-r-cran-tidyverse r-cran-data.table r-cran-devtools r-cran-shiny}"
+          # `apt-get install` can't be used here: r2u's r-cran-* need r-base-core
+          # >= 4.5 which a bare runner lacks, so install bails at resolution and
+          # never touches the mirror. `apt-get download` fetches named .debs with
+          # NO dependency resolution — real mirror transfers, the actual failure
+          # surface. Package names come from the r2u index so they truly exist for
+          # this arch (which also gives us a per-arch coverage count).
+          NDL="${{ inputs.num_downloads }}"; NDL="${NDL:-40}"
           ARCH="${{ matrix.arch }}"
           EV="events-${ARCH}.csv"
-          npkg=$(echo "$PKGS" | wc -w | tr -d ' ')
-          echo "deb [trusted=yes] https://r2u.stat.illinois.edu/ubuntu noble main" \
-            | sudo tee /etc/apt/sources.list.d/r2u.list >/dev/null
-          # Redirect runs as the (non-root) shell user to a world-writable target.
-          # shellcheck disable=SC2024
-          sudo apt-get update -o APT::Get::List-Cleanup=0 >/dev/null 2>&1 || true
-          log="$(mktemp)"
-          ts="$(date -u +%FT%TZ)"; start="$(date +%s)"
-          # $PKGS is deliberately unquoted to pass several package args; the redirect
-          # target ($log) is owned by this (non-root) shell user.
-          # shellcheck disable=SC2086,SC2024
-          if sudo timeout 600 apt-get install -y --download-only --no-install-recommends \
-                $PKGS >"$log" 2>&1; then
-            failed=0; note="ok"
+          tmp="$(mktemp -d)"
+          echo "deb [trusted=yes arch=${ARCH}] https://r2u.stat.illinois.edu/ubuntu noble main" \
+            > "$tmp/r2u.list"
+          # Refresh ONLY the r2u index (fast, isolates the mirror).
+          sudo apt-get update -o Dir::Etc::sourcelist="$tmp/r2u.list" \
+            -o Dir::Etc::sourceparts="/dev/null" -o APT::Get::List-Cleanup="0" \
+            >/dev/null 2>&1 || true
+          # r2u r-cran coverage for this arch (relevant to the arm64-shift proposal).
+          avail="$(apt-cache search '^r-cran-' | wc -l | tr -d ' ')"
+          echo "r2u exposes ${avail} r-cran-* packages for ${ARCH}"
+          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$(date -u +%FT%TZ),coverage,$avail,0,0,r-cran-count" >> "$EV"
+
+          log="$(mktemp)"; ts="$(date -u +%FT%TZ)"; start="$(date +%s)"
+          # Pick NDL real package names at random from the r2u index.
+          mapfile -t names < <(apt-cache search '^r-cran-' | awk '{print $1}' | shuf | head -n "$NDL")
+          got=${#names[@]}
+          if [ "$got" -eq 0 ]; then
+            failed=0; note="no-r-cran-index-for-${ARCH}"
           else
-            # Classify from apt output: connection timeout vs package unavailable.
-            if grep -qiE 'could not connect|connection timed out|unable to connect|failed to fetch.*(connect|timed out|timeout)' "$log"; then
+            # download-only, into $tmp; no deps, so this is pure mirror transfer.
+            if ( cd "$tmp" && timeout 600 apt-get download "${names[@]}" ) >"$log" 2>&1; then
+              failed=0; note="ok-${got}debs"
+            elif grep -qiE 'could not connect|connection timed out|unable to connect|failed to fetch.*(connect|timed out|timeout|reset)' "$log"; then
               failed=1; note="connection-timeout"
-            elif grep -qiE 'unable to locate|no installation candidate|has no installation' "$log"; then
-              failed=0; note="package-unavailable-on-${ARCH}"
             else
-              failed=1; note="other-failure"
+              failed=1; note="other-fetch-failure"
             fi
           fi
           dur=$(( $(date +%s) - start ))
-          echo "-- last lines of apt output --"; tail -n 15 "$log" || true
-          echo "bulk: ${npkg} pkg groups → failed=${failed} note=${note} in ${dur}s"
-          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$ts,bulk,$npkg,$failed,$dur,$note" >> "$EV"
+          echo "-- last lines of apt-get download output --"; tail -n 12 "$log" 2>/dev/null || true
+          debs=$(find "$tmp" -name '*.deb' | wc -l | tr -d ' ')
+          echo "bulk: requested ${got} debs → got ${debs}, failed=${failed} note=${note} in ${dur}s"
+          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$ts,bulk,$got,$failed,$dur,$note" >> "$EV"
           {
-            echo "| bulk r2u fetch | failed=${failed} (${note}) in ${dur}s |"
+            echo "| r2u r-cran coverage | ${avail} packages (${ARCH}) |"
+            echo "| bulk fetch | ${debs}/${got} debs, failed=${failed} (${note}) in ${dur}s |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload per-arch CSVs
