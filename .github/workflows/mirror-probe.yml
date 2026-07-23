@@ -165,7 +165,7 @@ jobs:
           # window; if the mirror/firewall drops SYNs under concurrency, a burst
           # exposes it where a paced probe would not. Each worker makes ONE fresh
           # connection (no keep-alive) and reports 1 on failure, 0 on HTTP 200.
-          BURST="${{ inputs.burst_size }}"; BURST="${BURST:-50}"
+          BURST="${{ inputs.burst_size }}"; BURST="${BURST:-120}"
           CT="${{ inputs.connect_timeout }}"; CT="${CT:-30}"
           ARCH="${{ matrix.arch }}"
           EV="events-${ARCH}.csv"
