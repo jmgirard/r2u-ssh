@@ -177,54 +177,55 @@ jobs:
             echo "| burst (${BURST} parallel) | ${fails} failed in ${dur}s |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Bulk r2u package fetch (download-only, real build analog)
+      - name: Bulk r2u package fetch (real .debs, straight from the mirror)
         run: |
           set -u
-          # `apt-get install` can't be used here: r2u's r-cran-* need r-base-core
-          # >= 4.5 which a bare runner lacks, so install bails at resolution and
-          # never touches the mirror. `apt-get download` fetches named .debs with
-          # NO dependency resolution — real mirror transfers, the actual failure
-          # surface. Package names come from the r2u index so they truly exist for
-          # this arch (which also gives us a per-arch coverage count).
+          # apt resolves r-cran-* against the Ubuntu archive (which also ships
+          # r-cran-*), so `apt-get download` fetched from azure.archive.ubuntu.com,
+          # not r2u. To isolate r2u we read r2u's OWN Packages index and curl real
+          # .deb URLs straight from the mirror. Each .deb is one fetch = exactly the
+          # build's unit of exposure, over full-size transfers (catches mid-stream
+          # stalls a connect-only probe misses).
           NDL="${{ inputs.num_downloads }}"; NDL="${NDL:-40}"
+          CT="${{ inputs.connect_timeout }}"; CT="${CT:-30}"
           ARCH="${{ matrix.arch }}"
           EV="events-${ARCH}.csv"
-          tmp="$(mktemp -d)"
-          echo "deb [trusted=yes arch=${ARCH}] https://r2u.stat.illinois.edu/ubuntu noble main" \
-            > "$tmp/r2u.list"
-          # Refresh ONLY the r2u index (fast, isolates the mirror).
-          sudo apt-get update -o Dir::Etc::sourcelist="$tmp/r2u.list" \
-            -o Dir::Etc::sourceparts="/dev/null" -o APT::Get::List-Cleanup="0" \
-            >/dev/null 2>&1 || true
-          # r2u r-cran coverage for this arch (relevant to the arm64-shift proposal).
-          avail="$(apt-cache search '^r-cran-' | wc -l | tr -d ' ')"
-          echo "r2u exposes ${avail} r-cran-* packages for ${ARCH}"
-          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$(date -u +%FT%TZ),coverage,$avail,0,0,r-cran-count" >> "$EV"
-
-          log="$(mktemp)"; ts="$(date -u +%FT%TZ)"; start="$(date +%s)"
-          # Pick NDL real package names at random from the r2u index.
-          mapfile -t names < <(apt-cache search '^r-cran-' | awk '{print $1}' | shuf | head -n "$NDL")
-          got=${#names[@]}
-          if [ "$got" -eq 0 ]; then
-            failed=0; note="no-r-cran-index-for-${ARCH}"
-          else
-            # download-only, into $tmp; no deps, so this is pure mirror transfer.
-            if ( cd "$tmp" && timeout 600 apt-get download "${names[@]}" ) >"$log" 2>&1; then
-              failed=0; note="ok-${got}debs"
-            elif grep -qiE 'could not connect|connection timed out|unable to connect|failed to fetch.*(connect|timed out|timeout|reset)' "$log"; then
-              failed=1; note="connection-timeout"
-            else
-              failed=1; note="other-fetch-failure"
-            fi
+          BASE="https://r2u.stat.illinois.edu/ubuntu"
+          pkgs="$(mktemp)"
+          # Fetch r2u's real index for this arch (accurate coverage, unlike apt-cache).
+          if ! curl -sS --max-time 90 "$BASE/dists/noble/main/binary-${ARCH}/Packages.gz" \
+                | gunzip > "$pkgs" 2>/dev/null; then
+            echo "could not fetch r2u Packages index for ${ARCH}"
+            echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$(date -u +%FT%TZ),bulk,0,1,0,index-fetch-failed" >> "$EV"
+            exit 0
           fi
+          avail="$(grep -c '^Package: ' "$pkgs")"
+          echo "r2u exposes ${avail} packages for ${ARCH}"
+          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$(date -u +%FT%TZ),coverage,$avail,0,0,r2u-pkg-count" >> "$EV"
+
+          mapfile -t files < <(awk '/^Filename: /{print $2}' "$pkgs" | shuf | head -n "$NDL")
+          got=${#files[@]}
+          ts="$(date -u +%FT%TZ)"; start="$(date +%s)"
+          dlfail=0; conn_to=0; bytes=0
+          for fn in "${files[@]}"; do
+            m="$(curl -sS -o /dev/null --connect-timeout "$CT" --max-time "$((CT + 90))" \
+                -w '%{http_code} %{size_download}' "$BASE/$fn" 2>/dev/null)"; ec=$?
+            read -r code sz <<< "$m"
+            bytes=$(( bytes + ${sz:-0} ))
+            if [ "$ec" -ne 0 ] || [ "$code" != "200" ]; then
+              dlfail=$(( dlfail + 1 ))
+              [ "$ec" -eq 28 ] && conn_to=$(( conn_to + 1 ))
+            fi
+          done
           dur=$(( $(date +%s) - start ))
-          echo "-- last lines of apt-get download output --"; tail -n 12 "$log" 2>/dev/null || true
-          debs=$(find "$tmp" -name '*.deb' | wc -l | tr -d ' ')
-          echo "bulk: requested ${got} debs → got ${debs}, failed=${failed} note=${note} in ${dur}s"
-          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$ts,bulk,$got,$failed,$dur,$note" >> "$EV"
+          mb=$(( bytes / 1000000 ))
+          if [ "$dlfail" -eq 0 ]; then note="ok-${got}debs-${mb}MB"
+          else note="fail${dlfail}_timeout${conn_to}_${mb}MB"; fi
+          echo "bulk: ${got} real .debs from r2u → ${dlfail} failed (${conn_to} timeouts), ${mb}MB in ${dur}s"
+          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$ts,bulk,$got,$dlfail,$dur,$note" >> "$EV"
           {
-            echo "| r2u r-cran coverage | ${avail} packages (${ARCH}) |"
-            echo "| bulk fetch | ${debs}/${got} debs, failed=${failed} (${note}) in ${dur}s |"
+            echo "| r2u coverage (${ARCH}) | ${avail} packages |"
+            echo "| bulk fetch | ${got} .debs, ${dlfail} failed (${conn_to} timeouts), ${mb}MB in ${dur}s |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload per-arch CSVs
