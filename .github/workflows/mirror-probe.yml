@@ -27,11 +27,15 @@ on:
       burst_size:
         description: "Parallel new connections in the burst step (apt-style fan-out)"
         required: false
-        default: "50"
+        default: "120"
       num_downloads:
         description: "How many real r-cran .debs to fetch in the bulk step"
         required: false
-        default: "40"
+        default: "150"
+      bulk_parallel:
+        description: "Concurrent .deb downloads in the bulk step (real-build fan-out)"
+        required: false
+        default: "12"
 
 # Endpoint mirrors what `apt-get update` hits via the rocker/r2u base source.
 env:
@@ -52,10 +56,15 @@ jobs:
     steps:
       - name: Context
         run: |
+          # Capture the runner's egress IP ONCE and export it, so every probe/
+          # event row is tagged with the source range it was sampled from — the
+          # key variable if the fault is tied to specific Azure IP ranges.
+          ip="$(curl -s --max-time 15 https://api.ipify.org || echo unknown)"
+          echo "EGRESS_IP=${ip}" >> "$GITHUB_ENV"
           echo "arch=${{ matrix.arch }} runner=${{ matrix.runner }}"
           echo "uname: $(uname -m)"
           echo "utc:   $(date -u +%FT%TZ)"
-          echo "egress IP: $(curl -s --max-time 15 https://api.ipify.org || echo unknown)"
+          echo "egress IP: ${ip}"
 
       - name: Curl connect probes
         id: curl
@@ -68,8 +77,9 @@ jobs:
           RUN_TS="$(date -u +%FT%TZ)"
           ARCH="${{ matrix.arch }}"
           OUT="probe-${ARCH}.csv"
-          # CSV header. run_id+run_attempt uniquely key each sample batch.
-          echo "run_id,run_attempt,attempt,arch,utc,exit_code,http_code,time_connect,time_total,timed_out" > "$OUT"
+          # CSV header. run_id+run_attempt uniquely key each sample batch;
+          # egress_ip tags the source range for per-/16 stratification.
+          echo "run_id,run_attempt,attempt,arch,egress_ip,utc,exit_code,http_code,time_connect,time_total,timed_out" > "$OUT"
 
           fails=0
           declare -a connects=()
@@ -94,7 +104,7 @@ jobs:
               connects+=("$tc")
               echo "attempt $i: ok   http=$http connect=${tc}s total=${tt}s"
             fi
-            echo "${{ github.run_id }},${{ github.run_attempt }},$i,$ARCH,$ts,$ec,$http,$tc,$tt,$timed_out" >> "$OUT"
+            echo "${{ github.run_id }},${{ github.run_attempt }},$i,$ARCH,${EGRESS_IP:-unknown},$ts,$ec,$http,$tc,$tt,$timed_out" >> "$OUT"
             [ "$i" -lt "$N" ] && sleep "$SLEEP"
           done
 
@@ -116,7 +126,7 @@ jobs:
             echo "| metric | value |"
             echo "|---|---|"
             echo "| runner | \`${{ matrix.runner }}\` |"
-            echo "| egress IP | \`$(curl -s --max-time 15 https://api.ipify.org || echo unknown)\` |"
+            echo "| egress IP | \`${EGRESS_IP:-unknown}\` |"
             echo "| attempts | $N |"
             echo "| failures | $fails |"
             echo "| failure rate | ${rate}% |"
@@ -159,7 +169,7 @@ jobs:
           CT="${{ inputs.connect_timeout }}"; CT="${CT:-30}"
           ARCH="${{ matrix.arch }}"
           EV="events-${ARCH}.csv"
-          echo "run_id,run_attempt,arch,utc,kind,n,failures,duration_s,note" > "$EV"
+          echo "run_id,run_attempt,arch,egress_ip,utc,kind,n,failures,duration_s,note" > "$EV"
           export PROBE_URL CT
           ts="$(date -u +%FT%TZ)"; start="$(date +%s)"
           # $CT/$PROBE_URL expand inside the inner (exported-env) bash -c; awk '$1'
@@ -172,7 +182,7 @@ jobs:
             ' _ | awk '{s+=$1} END{print s+0}')"
           dur=$(( $(date +%s) - start ))
           echo "burst: ${fails}/${BURST} parallel connections failed in ${dur}s"
-          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$ts,burst,$BURST,$fails,$dur,parallel${BURST}" >> "$EV"
+          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,${EGRESS_IP:-unknown},$ts,burst,$BURST,$fails,$dur,parallel${BURST}" >> "$EV"
           {
             echo "| burst (${BURST} parallel) | ${fails} failed in ${dur}s |"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -186,43 +196,49 @@ jobs:
           # .deb URLs straight from the mirror. Each .deb is one fetch = exactly the
           # build's unit of exposure, over full-size transfers (catches mid-stream
           # stalls a connect-only probe misses).
-          NDL="${{ inputs.num_downloads }}"; NDL="${NDL:-40}"
+          NDL="${{ inputs.num_downloads }}"; NDL="${NDL:-150}"
           CT="${{ inputs.connect_timeout }}"; CT="${CT:-30}"
+          BP="${{ inputs.bulk_parallel }}"; BP="${BP:-12}"
           ARCH="${{ matrix.arch }}"
           EV="events-${ARCH}.csv"
+          IP="${EGRESS_IP:-unknown}"
           BASE="https://r2u.stat.illinois.edu/ubuntu"
           pkgs="$(mktemp)"
           # Fetch r2u's real index for this arch (accurate coverage, unlike apt-cache).
           if ! curl -sS --max-time 90 "$BASE/dists/noble/main/binary-${ARCH}/Packages.gz" \
                 | gunzip > "$pkgs" 2>/dev/null; then
             echo "could not fetch r2u Packages index for ${ARCH}"
-            echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$(date -u +%FT%TZ),bulk,0,1,0,index-fetch-failed" >> "$EV"
+            echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$IP,$(date -u +%FT%TZ),bulk,0,1,0,index-fetch-failed" >> "$EV"
             exit 0
           fi
           avail="$(grep -c '^Package: ' "$pkgs")"
           echo "r2u exposes ${avail} packages for ${ARCH}"
-          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$(date -u +%FT%TZ),coverage,$avail,0,0,r2u-pkg-count" >> "$EV"
+          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$IP,$(date -u +%FT%TZ),coverage,$avail,0,0,r2u-pkg-count" >> "$EV"
 
           mapfile -t files < <(awk '/^Filename: /{print $2}' "$pkgs" | shuf | head -n "$NDL")
           got=${#files[@]}
           ts="$(date -u +%FT%TZ)"; start="$(date +%s)"
-          dlfail=0; conn_to=0; bytes=0
-          for fn in "${files[@]}"; do
-            m="$(curl -sS -o /dev/null --connect-timeout "$CT" --max-time "$((CT + 90))" \
-                -w '%{http_code} %{size_download}' "$BASE/$fn" 2>/dev/null)"; ec=$?
-            read -r code sz <<< "$m"
-            bytes=$(( bytes + ${sz:-0} ))
-            if [ "$ec" -ne 0 ] || [ "$code" != "200" ]; then
-              dlfail=$(( dlfail + 1 ))
-              [ "$ec" -eq 28 ] && conn_to=$(( conn_to + 1 ))
-            fi
-          done
+          # Download the .debs with real-build concurrency; each worker emits
+          # "exit_code http_code size" so we can tally failures and timeouts.
+          res="$(mktemp)"
+          export BASE CT
+          # $BASE/$CT/$1 expand inside the inner (exported-env) bash -c — intentional.
+          # shellcheck disable=SC2016
+          printf '%s\n' "${files[@]}" | xargs -P "$BP" -n1 bash -c '
+              m=$(curl -sS -o /dev/null --connect-timeout "$CT" --max-time "$((CT + 90))" \
+                  -w "%{http_code} %{size_download}" "$BASE/$1" 2>/dev/null); ec=$?
+              read -r code sz <<< "$m"
+              echo "$ec ${code:-000} ${sz:-0}"
+            ' _ > "$res"
           dur=$(( $(date +%s) - start ))
+          dlfail=$(awk '$1!=0 || $2!=200 {c++} END{print c+0}' "$res")
+          conn_to=$(awk '$1==28 {c++} END{print c+0}' "$res")
+          bytes=$(awk '{b+=$3} END{print b+0}' "$res")
           mb=$(( bytes / 1000000 ))
-          if [ "$dlfail" -eq 0 ]; then note="ok-${got}debs-${mb}MB"
-          else note="fail${dlfail}_timeout${conn_to}_${mb}MB"; fi
-          echo "bulk: ${got} real .debs from r2u → ${dlfail} failed (${conn_to} timeouts), ${mb}MB in ${dur}s"
-          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$ts,bulk,$got,$dlfail,$dur,$note" >> "$EV"
+          if [ "$dlfail" -eq 0 ]; then note="ok-${got}debs-${mb}MB-p${BP}"
+          else note="fail${dlfail}_timeout${conn_to}_${mb}MB-p${BP}"; fi
+          echo "bulk: ${got} real .debs from r2u (parallel ${BP}) → ${dlfail} failed (${conn_to} timeouts), ${mb}MB in ${dur}s"
+          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$IP,$ts,bulk,$got,$dlfail,$dur,$note" >> "$EV"
           {
             echo "| r2u coverage (${ARCH}) | ${avail} packages |"
             echo "| bulk fetch | ${got} .debs, ${dlfail} failed (${conn_to} timeouts), ${mb}MB in ${dur}s |"
