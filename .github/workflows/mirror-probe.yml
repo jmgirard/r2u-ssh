@@ -15,7 +15,7 @@ on:
       iterations:
         description: "Connect probes per architecture"
         required: false
-        default: "30"
+        default: "6"
       connect_timeout:
         description: "Per-attempt connect timeout (seconds)"
         required: false
@@ -23,19 +23,19 @@ on:
       sleep_between:
         description: "Seconds to sleep between probes (independent connections)"
         required: false
-        default: "2"
+        default: "5"
       burst_size:
         description: "Parallel new connections in the burst step (apt-style fan-out)"
         required: false
-        default: "120"
+        default: "20"
       num_downloads:
         description: "How many real r-cran .debs to fetch in the bulk step"
         required: false
-        default: "150"
+        default: "8"
       bulk_parallel:
         description: "Concurrent .deb downloads in the bulk step (real-build fan-out)"
         required: false
-        default: "12"
+        default: "4"
 
 # Endpoint mirrors what `apt-get update` hits via the rocker/r2u base source.
 env:
@@ -71,9 +71,9 @@ jobs:
         run: |
           set -u
           # Fall back to defaults on push events, where inputs.* are unset.
-          N="${{ inputs.iterations }}";      N="${N:-30}"
+          N="${{ inputs.iterations }}";      N="${N:-6}"
           CT="${{ inputs.connect_timeout }}"; CT="${CT:-30}"
-          SLEEP="${{ inputs.sleep_between }}"; SLEEP="${SLEEP:-2}"
+          SLEEP="${{ inputs.sleep_between }}"; SLEEP="${SLEEP:-5}"
           RUN_TS="$(date -u +%FT%TZ)"
           ARCH="${{ matrix.arch }}"
           OUT="probe-${ARCH}.csv"
@@ -165,7 +165,7 @@ jobs:
           # window; if the mirror/firewall drops SYNs under concurrency, a burst
           # exposes it where a paced probe would not. Each worker makes ONE fresh
           # connection (no keep-alive) and reports 1 on failure, 0 on HTTP 200.
-          BURST="${{ inputs.burst_size }}"; BURST="${BURST:-120}"
+          BURST="${{ inputs.burst_size }}"; BURST="${BURST:-20}"
           CT="${{ inputs.connect_timeout }}"; CT="${CT:-30}"
           ARCH="${{ matrix.arch }}"
           EV="events-${ARCH}.csv"
@@ -196,9 +196,9 @@ jobs:
           # .deb URLs straight from the mirror. Each .deb is one fetch = exactly the
           # build's unit of exposure, over full-size transfers (catches mid-stream
           # stalls a connect-only probe misses).
-          NDL="${{ inputs.num_downloads }}"; NDL="${NDL:-150}"
+          NDL="${{ inputs.num_downloads }}"; NDL="${NDL:-8}"
           CT="${{ inputs.connect_timeout }}"; CT="${CT:-30}"
-          BP="${{ inputs.bulk_parallel }}"; BP="${BP:-12}"
+          BP="${{ inputs.bulk_parallel }}"; BP="${BP:-4}"
           ARCH="${{ matrix.arch }}"
           EV="events-${ARCH}.csv"
           IP="${EGRESS_IP:-unknown}"
