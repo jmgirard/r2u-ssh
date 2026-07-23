@@ -1,0 +1,149 @@
+# Diagnostic: measure r2u mirror connection reliability from amd64 vs arm64
+# GitHub-hosted runners. Throwaway experiment for r2u discussion #159 — NOT part
+# of the product build. Manual dispatch; each run appends one CSV row per attempt
+# to a per-arch artifact so results aggregate across several dispatches.
+name: mirror-probe
+
+on:
+  # Push to the diagnostic branch runs it (workflow_dispatch alone is not
+  # dispatchable from a non-default branch). Re-run via "Re-run all jobs" to
+  # accumulate independent samples without touching the default branch.
+  push:
+    branches: [diag/mirror-arch-probe]
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: "Connect probes per architecture"
+        required: false
+        default: "30"
+      connect_timeout:
+        description: "Per-attempt connect timeout (seconds)"
+        required: false
+        default: "30"
+      sleep_between:
+        description: "Seconds to sleep between probes (independent connections)"
+        required: false
+        default: "2"
+
+# Endpoint mirrors what `apt-get update` hits via the rocker/r2u base source.
+env:
+  PROBE_URL: "https://r2u.stat.illinois.edu/ubuntu/dists/noble/InRelease"
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    name: probe-${{ matrix.arch }}
+    steps:
+      - name: Context
+        run: |
+          echo "arch=${{ matrix.arch }} runner=${{ matrix.runner }}"
+          echo "uname: $(uname -m)"
+          echo "utc:   $(date -u +%FT%TZ)"
+          echo "egress IP: $(curl -s --max-time 15 https://api.ipify.org || echo unknown)"
+
+      - name: Curl connect probes
+        id: curl
+        run: |
+          set -u
+          # Fall back to defaults on push events, where inputs.* are unset.
+          N="${{ inputs.iterations }}";      N="${N:-30}"
+          CT="${{ inputs.connect_timeout }}"; CT="${CT:-30}"
+          SLEEP="${{ inputs.sleep_between }}"; SLEEP="${SLEEP:-2}"
+          RUN_TS="$(date -u +%FT%TZ)"
+          ARCH="${{ matrix.arch }}"
+          OUT="probe-${ARCH}.csv"
+          # CSV header (recreated each run; artifact merge concatenates across runs).
+          echo "run_id,attempt,arch,utc,exit_code,http_code,time_connect,time_total,timed_out" > "$OUT"
+
+          fails=0
+          declare -a connects=()
+          for i in $(seq 1 "$N"); do
+            ts="$(date -u +%FT%TZ)"
+            # Capture curl's own exit code (set -u, no set -e, so a failure here
+            # does not abort the loop). -w emits metrics even on a failed request.
+            metrics="$(curl -sS -o /dev/null \
+                --connect-timeout "$CT" --max-time "$((CT + 15))" \
+                -w '%{http_code} %{time_connect} %{time_total}' \
+                "$PROBE_URL" 2>/dev/null)"
+            ec=$?
+            read -r http tc tt <<< "$metrics"
+            http="${http:-000}"; tc="${tc:-0}"; tt="${tt:-0}"
+            timed_out=0
+            # curl exit 28 = timeout; treat any non-200 or nonzero exit as a failure.
+            if [ "$ec" -eq 28 ]; then timed_out=1; fi
+            if [ "$ec" -ne 0 ] || [ "$http" != "200" ]; then
+              fails=$((fails + 1))
+              echo "attempt $i: FAIL exit=$ec http=$http connect=${tc}s total=${tt}s"
+            else
+              connects+=("$tc")
+              echo "attempt $i: ok   http=$http connect=${tc}s total=${tt}s"
+            fi
+            echo "${{ github.run_id }},$i,$ARCH,$ts,$ec,$http,$tc,$tt,$timed_out" >> "$OUT"
+            [ "$i" -lt "$N" ] && sleep "$SLEEP"
+          done
+
+          rate=$(awk "BEGIN{printf \"%.1f\", ($fails/$N)*100}")
+          # p50/p95 of successful connect times.
+          p50="n/a"; p95="n/a"
+          if [ "${#connects[@]}" -gt 0 ]; then
+            sorted=$(printf '%s\n' "${connects[@]}" | sort -n)
+            cnt=${#connects[@]}
+            i50=$(awk "BEGIN{printf \"%d\", ($cnt*0.5)+0.5}"); [ "$i50" -lt 1 ] && i50=1
+            i95=$(awk "BEGIN{printf \"%d\", ($cnt*0.95)+0.5}"); [ "$i95" -lt 1 ] && i95=1
+            p50=$(echo "$sorted" | sed -n "${i50}p")
+            p95=$(echo "$sorted" | sed -n "${i95}p")
+          fi
+
+          {
+            echo "### mirror-probe — ${ARCH} (run ${{ github.run_id }})"
+            echo ""
+            echo "| metric | value |"
+            echo "|---|---|"
+            echo "| runner | \`${{ matrix.runner }}\` |"
+            echo "| egress IP | \`$(curl -s --max-time 15 https://api.ipify.org || echo unknown)\` |"
+            echo "| attempts | $N |"
+            echo "| failures | $fails |"
+            echo "| failure rate | ${rate}% |"
+            echo "| connect p50 (ok) | ${p50}s |"
+            echo "| connect p95 (ok) | ${p95}s |"
+            echo "| started (UTC) | $RUN_TS |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "SUMMARY ${ARCH}: ${fails}/${N} failed (${rate}%), connect p50=${p50}s p95=${p95}s"
+
+      - name: Real apt-get update against r2u source (isolated)
+        run: |
+          set -u
+          # Faithful reproduction of the Docker build step: query ONLY the r2u
+          # source, timed. Non-fatal — a hang here is exactly the signal we want.
+          tmp="$(mktemp -d)"
+          # Pin the source to this runner's arch so a 404 (missing index) can't be
+          # mistaken for the connection hang we are hunting.
+          echo "deb [trusted=yes arch=${{ matrix.arch }}] https://r2u.stat.illinois.edu/ubuntu noble main" \
+            > "$tmp/r2u.list"
+          echo "-- timing apt-get update against r2u only --"
+          start=$(date +%s)
+          if timeout 120 sudo apt-get update \
+              -o Dir::Etc::sourcelist="$tmp/r2u.list" \
+              -o Dir::Etc::sourceparts="/dev/null" \
+              -o APT::Get::List-Cleanup="0"; then
+            echo "apt r2u update: OK in $(( $(date +%s) - start ))s"
+          else
+            echo "apt r2u update: FAILED/TIMED OUT after $(( $(date +%s) - start ))s"
+          fi
+
+      - name: Upload per-arch CSV
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-${{ matrix.arch }}-${{ github.run_id }}
+          path: probe-${{ matrix.arch }}.csv
+          if-no-files-found: warn
