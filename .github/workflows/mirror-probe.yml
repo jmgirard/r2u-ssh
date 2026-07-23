@@ -24,6 +24,14 @@ on:
         description: "Seconds to sleep between probes (independent connections)"
         required: false
         default: "2"
+      burst_size:
+        description: "Parallel new connections in the burst step (apt-style fan-out)"
+        required: false
+        default: "50"
+      packages:
+        description: "r-cran packages for the bulk download-only step"
+        required: false
+        default: "r-cran-tidyverse r-cran-data.table r-cran-devtools r-cran-shiny"
 
 # Endpoint mirrors what `apt-get update` hits via the rocker/r2u base source.
 env:
@@ -140,10 +148,84 @@ jobs:
             echo "apt r2u update: FAILED/TIMED OUT after $(( $(date +%s) - start ))s"
           fi
 
-      - name: Upload per-arch CSV
+      - name: Burst of parallel new connections (apt-style fan-out)
+        run: |
+          set -u
+          # A real install.packages() batch opens many connections in a tight
+          # window; if the mirror/firewall drops SYNs under concurrency, a burst
+          # exposes it where a paced probe would not. Each worker makes ONE fresh
+          # connection (no keep-alive) and reports 1 on failure, 0 on HTTP 200.
+          BURST="${{ inputs.burst_size }}"; BURST="${BURST:-50}"
+          CT="${{ inputs.connect_timeout }}"; CT="${CT:-30}"
+          ARCH="${{ matrix.arch }}"
+          EV="events-${ARCH}.csv"
+          echo "run_id,run_attempt,arch,utc,kind,n,failures,duration_s,note" > "$EV"
+          export PROBE_URL CT
+          ts="$(date -u +%FT%TZ)"; start="$(date +%s)"
+          # $CT/$PROBE_URL expand inside the inner (exported-env) bash -c; awk '$1'
+          # is an awk field, not a shell variable — both are intentional.
+          # shellcheck disable=SC2016
+          fails="$(seq 1 "$BURST" | xargs -P "$BURST" -n1 bash -c '
+              code=$(curl -sS -o /dev/null --connect-timeout "$CT" \
+                  --max-time "$((CT + 15))" -w "%{http_code}" "$PROBE_URL" 2>/dev/null)
+              [ "$code" = "200" ] && echo 0 || echo 1
+            ' _ | awk '{s+=$1} END{print s+0}')"
+          dur=$(( $(date +%s) - start ))
+          echo "burst: ${fails}/${BURST} parallel connections failed in ${dur}s"
+          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$ts,burst,$BURST,$fails,$dur,parallel${BURST}" >> "$EV"
+          {
+            echo "| burst (${BURST} parallel) | ${fails} failed in ${dur}s |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Bulk r2u package fetch (download-only, real build analog)
+        run: |
+          set -u
+          # Closest analog to the failing build: point apt at r2u and download a
+          # batch of r-cran .debs, opening apt's real connection pattern. Classify
+          # any failure as a CONNECTION problem vs a MISSING-PACKAGE problem so an
+          # arm64 coverage gap is not mistaken for a mirror timeout.
+          PKGS="${{ inputs.packages }}"
+          PKGS="${PKGS:-r-cran-tidyverse r-cran-data.table r-cran-devtools r-cran-shiny}"
+          ARCH="${{ matrix.arch }}"
+          EV="events-${ARCH}.csv"
+          npkg=$(echo "$PKGS" | wc -w | tr -d ' ')
+          echo "deb [trusted=yes] https://r2u.stat.illinois.edu/ubuntu noble main" \
+            | sudo tee /etc/apt/sources.list.d/r2u.list >/dev/null
+          # Redirect runs as the (non-root) shell user to a world-writable target.
+          # shellcheck disable=SC2024
+          sudo apt-get update -o APT::Get::List-Cleanup=0 >/dev/null 2>&1 || true
+          log="$(mktemp)"
+          ts="$(date -u +%FT%TZ)"; start="$(date +%s)"
+          # $PKGS is deliberately unquoted to pass several package args; the redirect
+          # target ($log) is owned by this (non-root) shell user.
+          # shellcheck disable=SC2086,SC2024
+          if sudo timeout 600 apt-get install -y --download-only --no-install-recommends \
+                $PKGS >"$log" 2>&1; then
+            failed=0; note="ok"
+          else
+            # Classify from apt output: connection timeout vs package unavailable.
+            if grep -qiE 'could not connect|connection timed out|unable to connect|failed to fetch.*(connect|timed out|timeout)' "$log"; then
+              failed=1; note="connection-timeout"
+            elif grep -qiE 'unable to locate|no installation candidate|has no installation' "$log"; then
+              failed=0; note="package-unavailable-on-${ARCH}"
+            else
+              failed=1; note="other-failure"
+            fi
+          fi
+          dur=$(( $(date +%s) - start ))
+          echo "-- last lines of apt output --"; tail -n 15 "$log" || true
+          echo "bulk: ${npkg} pkg groups → failed=${failed} note=${note} in ${dur}s"
+          echo "${{ github.run_id }},${{ github.run_attempt }},$ARCH,$ts,bulk,$npkg,$failed,$dur,$note" >> "$EV"
+          {
+            echo "| bulk r2u fetch | failed=${failed} (${note}) in ${dur}s |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload per-arch CSVs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: probe-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: probe-${{ matrix.arch }}.csv
+          path: |
+            probe-${{ matrix.arch }}.csv
+            events-${{ matrix.arch }}.csv
           if-no-files-found: warn
