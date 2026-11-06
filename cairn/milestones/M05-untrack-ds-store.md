@@ -1,6 +1,6 @@
 # M05: Untrack .DS_Store
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -52,6 +52,8 @@ add a `.DS_Store` line to `.gitignore`, and add a `**/.DS_Store` line to `.docke
 - 2026-11-05: T2 probe choices: `FROM busybox:1.37`, the AC's RUN plus two listing steps (`ls -A /ctx /ctx/probe-sub`, `find /ctx -name .DS_Store`) so the copied context is shown non-empty and the failure is shown to come from the planted files; the root plant was the existing on-disk `.DS_Store`, the subdirectory plant `probe-sub/.DS_Store`.
 - 2026-11-05: T2 done — with `**/.DS_Store` in `.dockerignore` the probe build exited 0 and listed no `.DS_Store`; with the line removed it exited 1 at the `! find … | grep -q .` step after `find` printed `/ctx/.DS_Store` and `/ctx/probe-sub/.DS_Store`; line restored (no diff), `probe-sub/` deleted; hadolint clean, `docker build` succeeded.
 - 2026-11-05: the probe listing showed `CLAUDE.md` in the build context; outside Scope, so filed as candidate row "Keep CLAUDE.md out of the build context".
+- 2026-11-05: claim audit: not owed — internal tier
+- 2026-11-05: all tasks checked, verify clean (hadolint, `docker build`); status → review.
 
 ## Decisions
 
