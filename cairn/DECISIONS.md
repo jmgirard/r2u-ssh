@@ -47,3 +47,13 @@ GP7). git-lfs, quarto, and texlive stay out, awaiting demonstrated demand (GP2).
 **Consequences:** Every build carries git; the dependency surface grows by one
 apt package. DESIGN's extras bar and GP2 example text update to reflect git as
 added. A future request to bake in another tool reopens the bar via a new D-entry.
+
+### D-004 (2026-11-05): Add less as git's pager (dependency addition; annotates D-003)
+
+**Context:** With `--no-install-recommends`, git's recommended `less` is not installed, so git's
+default pager resolves to `more`. Adding an apt package is a dependency change.
+**Decision:** Install `less` in the same apt line as git. It counts as a support package for
+git, which already cleared the GP2 bar, not as a new day-one-universal tool. No pager settings
+are preset (GP7).
+**Consequences:** The dependency surface grows by one apt package. D-003's other exclusions
+(git-lfs, quarto, texlive) stand.
