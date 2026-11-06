@@ -20,6 +20,13 @@
 #      `down -v` removes the home volume.
 #  11. On that same home volume, a changed key replaces the old one: the new
 #      key connects and the old key is refused.
+#  12. No layer of the image holds a file named like an SSH host private key
+#      (`ssh_host_*_key`), with every layer the saved manifest names listed.
+#  13. Two `docker run` containers each present ed25519, ecdsa, and rsa host
+#      keys, all different between the two; /etc/ssh/host_keys is root 700.
+#  14. With docker-compose.yml, the host key stays the same across `down` and
+#      `up`, a force-recreate, and a recreate onto a second image build;
+#      `down -v` removes the host-key volume.
 #
 # Usage: test/smoke.sh [image-tag]   (default tag: r2u-ssh:smoke — built here)
 set -euo pipefail
@@ -32,10 +39,14 @@ PASS=0
 FAIL=0
 
 cleanup() {
-  # Tests 10-11 bring up a compose project of their own; remove it and its
-  # home volume. PROJ is set only once those tests start.
+  # Tests 10, 11, and 14 bring up a compose project of their own; remove it
+  # and its volumes. PROJ is set only once those tests start.
   if [[ -n "${PROJ:-}" ]]; then
     compose down -v >/dev/null 2>&1 || true
+  fi
+  # Test 14 builds a second image tag; untag it.
+  if [[ -n "${IMAGE2:-}" ]]; then
+    docker image rm "$IMAGE2" >/dev/null 2>&1 || true
   fi
   for c in "${CONTAINERS[@]:-}"; do
     [[ -n "$c" ]] && docker rm -f "$c" >/dev/null 2>&1 || true
@@ -63,6 +74,46 @@ host_port() {  # host_port <container-id>
 echo "== building $IMAGE =="
 docker build -t "$IMAGE" "$REPO_ROOT" >/dev/null
 ok "image builds"
+
+# --- Test 12: no host private key in any image layer (IP2) ------------------
+# A key deleted by a later RUN still ships in the lower layer, so list every
+# layer of `docker save`, not the final filesystem. manifest.json names the
+# layers in both the classic and the containerd image store; tar reads each
+# layer whether or not it is gzip-compressed.
+echo "== no SSH host private key in any image layer =="
+SAVE="$WORK/save"
+mkdir -p "$SAVE"
+if docker save "$IMAGE" -o "$WORK/image.tar" && tar -xf "$WORK/image.tar" -C "$SAVE"; then
+  rm -f "$WORK/image.tar"
+  LAYERS=()
+  while IFS= read -r layer; do
+    [[ -n "$layer" ]] && LAYERS+=("$layer")
+  done < <(grep -o '"Layers":\[[^]]*\]' "$SAVE/manifest.json" | grep -o '"[^"]*"' | sed -e 1d -e 's/"//g' || true)
+  LISTED=0
+  LIST_FAILED=()
+  HOSTKEY_HITS=""
+  for layer in "${LAYERS[@]}"; do
+    if NAMES="$(tar -tf "$SAVE/$layer" 2>/dev/null)"; then
+      LISTED=$((LISTED + 1))
+      HIT="$(awk -F/ '$NF ~ /^ssh_host_.*_key$/' <<<"$NAMES")"
+      [[ -n "$HIT" ]] && HOSTKEY_HITS+="$HIT "
+    else
+      LIST_FAILED+=("$layer")
+    fi
+  done
+  if [[ ${#LAYERS[@]} -eq 0 ]]; then
+    bad "saved manifest names no layers"
+  elif [[ ${#LIST_FAILED[@]} -gt 0 || $LISTED -ne ${#LAYERS[@]} ]]; then
+    bad "listed $LISTED of ${#LAYERS[@]} layers; could not list: ${LIST_FAILED[*]}"
+  elif [[ -n "$HOSTKEY_HITS" ]]; then
+    bad "image layers hold SSH host private keys: $HOSTKEY_HITS"
+  else
+    ok "no layer holds an SSH host private key ($LISTED layers listed)"
+  fi
+  rm -rf "${WORK:?}/save"   # about the image's size; free it before the other tests
+else
+  bad "could not save and unpack $IMAGE for the layer listing"
+fi
 
 # --- Test 5: OCI labels (M02) ----------------------------------------------
 # Honest 0.x version (GP3) and base-image provenance name.
@@ -112,6 +163,14 @@ ssh_as() {  # ssh_as <private-key> <port> <remote-command>
 
 ssh_run() {  # ssh_run <port> <remote-command>   (with the main key, "$WORK/id")
   ssh_as "$WORK/id" "$1" "$2"
+}
+
+host_key() {  # host_key <port> <ed25519|ecdsa|rsa>   (prints "<key-type> <base64>")
+  # ssh-keyscan prints "# host:port SSH-2.0-…" banners on stdout; field 1 of a
+  # key line is "[127.0.0.1]:<port>", which differs per container, so drop it.
+  local out
+  out="$(ssh-keyscan -T 5 -t "$2" -p "$1" 127.0.0.1 2>/dev/null || true)"
+  awk '!/^#/ && NF >= 3 { print $2, $3; exit }' <<<"$out"
 }
 
 wait_for_ssh() {  # wait_for_ssh <port> [private-key]   (default: "$WORK/id")
@@ -196,6 +255,32 @@ else
   bad "authorized_keys newline layout off (wc -l=$TRAILING, nonblank=$LINES_NONBLANK)"
 fi
 
+# --- Test 13: each container makes its own host keys ------------------------
+# The containers of tests 3 and 4 both came from `docker run` of one image.
+echo "== host keys differ per container =="
+for type in ed25519 ecdsa rsa; do
+  case "$type" in
+    ed25519) want="ssh-ed25519" ;;
+    ecdsa)   want="ecdsa-sha2-" ;;
+    rsa)     want="ssh-rsa" ;;
+  esac
+  KEY1="$(host_key "$PORT" "$type")"
+  KEY2="$(host_key "$PORT2" "$type")"
+  if [[ "$KEY1" != "$want"* || "$KEY2" != "$want"* ]]; then
+    bad "a container presents no $type host key (got '${KEY1:0:40}' and '${KEY2:0:40}')"
+  elif [[ "$KEY1" == "$KEY2" ]]; then
+    bad "two containers of one image share the $type host key"
+  else
+    ok "two containers of one image have different $type host keys"
+  fi
+done
+HKMODE="$(docker exec "$CID" stat -c '%U:%G %a' /etc/ssh/host_keys 2>&1 || true)"
+if [[ "$HKMODE" == "root:root 700" ]]; then
+  ok "/etc/ssh/host_keys is root:root 700"
+else
+  bad "/etc/ssh/host_keys is '$HKMODE', expected root:root 700"
+fi
+
 # --- Test 8: mounted key only ----------------------------------------------
 # boot-sshd.sh installs /keys/authorized_keys when it is mounted; no env var.
 echo "== mounted key (/keys/authorized_keys, no env var) =="
@@ -240,19 +325,21 @@ fi
 # override changes only the image (the tag built above, never pulled or
 # rebuilt). --env-file /dev/null keeps the repo's .env out; SSHPORT=0 lets
 # Docker pick the host port, which can change on every `up`.
-echo "== compose home volume (survives down; key change) =="
+echo "== compose volumes (home survives down; key change; stable host key) =="
 PROJ="r2u-ssh-smoke-$$"
 VOL="${PROJ}_home"
+HKVOL="${PROJ}_ssh-host-keys"
 cat > "$WORK/compose.override.yml" <<EOF
 services:
   r2u-ssh:
     image: $IMAGE
     pull_policy: never
 EOF
+OVERRIDE="$WORK/compose.override.yml"
 
-compose() {  # compose <args...>   (repo compose file + smoke override)
+compose() {  # compose <args...>   (repo compose file + the current $OVERRIDE)
   docker compose -p "$PROJ" --project-directory "$REPO_ROOT" \
-    -f "$REPO_ROOT/docker-compose.yml" -f "$WORK/compose.override.yml" \
+    -f "$REPO_ROOT/docker-compose.yml" -f "$OVERRIDE" \
     --env-file /dev/null "$@"
 }
 
@@ -269,17 +356,35 @@ up_tail() { tail -c 200 <<<"$UP_OUT"; }   # last compose up output, for FAIL lin
 
 volume_exists() { docker volume inspect "$1" >/dev/null 2>&1; }
 
-VOL_OURS=0   # set once we know the home volume is ours to check and remove
+# Test 14: the ed25519 host key read after the first `up` (HK_FIRST) must come
+# back after every later `up` on the same host-key volume.
+HK_FIRST=""
+same_host_key() {  # same_host_key <what-happened>   (reads the key on $CPORT)
+  local now
+  now="$(host_key "$CPORT" ed25519)"
+  if [[ -n "$now" && "$now" == "$HK_FIRST" ]]; then
+    ok "host key unchanged after $1"
+  else
+    bad "host key changed after $1 (first '${HK_FIRST:0:40}', now '${now:0:40}')"
+  fi
+}
+
+VOL_OURS=0   # set once we know the volumes are ours to check and remove
 if volume_exists "$VOL"; then
   bad "home volume $VOL already exists before the first up"
+elif volume_exists "$HKVOL"; then
+  bad "host-key volume $HKVOL already exists before the first up"
 elif VOL_OURS=1 && compose_up "$B64" && wait_for_ssh "$CPORT"; then
+  HK_FIRST="$(host_key "$CPORT" ed25519)"
+  [[ "$HK_FIRST" == ssh-ed25519* ]] || bad "no ed25519 host key after the first compose up"
   if ! ssh_run "$CPORT" 'mkdir -p ~/work && printf "%s\n" keep-me > ~/work/sentinel.txt'; then
     bad "could not write the test file in /home/rocker over SSH"
   fi
-  if ! compose down >/dev/null 2>&1; then   # no -v: the home volume stays
+  if ! compose down >/dev/null 2>&1; then   # no -v: the volumes stay
     bad "compose down (without -v) failed"
   fi
   if compose_up "$B64" && wait_for_ssh "$CPORT"; then
+    same_host_key "compose down and up"
     SENT="$(ssh_run "$CPORT" 'cat ~/work/sentinel.txt' 2>&1 || true)"
     if [[ "$(tr -d '\r' <<<"$SENT")" == "keep-me" ]]; then
       ok "file in /home/rocker survives compose down and up"
@@ -310,6 +415,33 @@ elif VOL_OURS=1 && compose_up "$B64" && wait_for_ssh "$CPORT"; then
       else
         bad "old key was not refused after the key changed (exit $A_CODE); got: $A_OUT"
       fi
+      same_host_key "up -d --force-recreate"
+
+      # Test 14, rebuild: a second build of this tree (a changed build arg
+      # reruns every RUN after the ARG, so the openssh-server layer is new)
+      # replaces the container on the same volumes.
+      IMAGE2="${IMAGE}-rebuild"
+      if docker build -q --build-arg BASE_DIGEST=smoke-rebuild -t "$IMAGE2" "$REPO_ROOT" >/dev/null; then
+        cat > "$WORK/compose.rebuild.yml" <<EOF
+services:
+  r2u-ssh:
+    image: $IMAGE2
+    pull_policy: never
+EOF
+        OVERRIDE="$WORK/compose.rebuild.yml"
+        if compose_up "$B64_B" && wait_for_ssh "$CPORT" "$WORK/id_b"; then
+          RUNNING="$(docker inspect -f '{{.Config.Image}}' "$(AUTHORIZED_KEYS_B64="$B64_B" compose ps -q r2u-ssh)" 2>&1 || true)"
+          if [[ "$RUNNING" == "$IMAGE2" ]]; then
+            same_host_key "a recreate onto a second image build"
+          else
+            bad "the service runs '$RUNNING', not the second build $IMAGE2"
+          fi
+        else
+          bad "SSH did not connect after the recreate onto $IMAGE2; compose up said: $(up_tail)"
+        fi
+      else
+        bad "the second image build ($IMAGE2) failed"
+      fi
     else
       bad "new key did not connect after recreating on the kept home volume; compose up said: $(up_tail)"
     fi
@@ -321,6 +453,8 @@ else
 fi
 
 if [[ $VOL_OURS -eq 1 ]]; then
+  HKVOL_BEFORE=0
+  volume_exists "$HKVOL" && HKVOL_BEFORE=1
   if ! volume_exists "$VOL"; then
     bad "home volume $VOL missing before compose down -v"
   elif ! compose down -v >/dev/null 2>&1; then
@@ -329,6 +463,13 @@ if [[ $VOL_OURS -eq 1 ]]; then
     bad "compose down -v left the home volume $VOL"
   else
     ok "compose down -v removes the home volume"
+  fi
+  if [[ $HKVOL_BEFORE -eq 0 ]]; then
+    bad "host-key volume $HKVOL missing before compose down -v"
+  elif volume_exists "$HKVOL"; then
+    bad "compose down -v left the host-key volume $HKVOL"
+  else
+    ok "compose down -v removes the host-key volume"
   fi
 fi
 

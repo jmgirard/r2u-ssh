@@ -98,6 +98,13 @@ lowercase. This includes your projects, cloned repositories, your git and shell
 setup files, and the Positron server. When the container is removed, the volume
 stays. Your files are there again the next time you run `docker compose up -d`.
 
+The container's SSH host keys are kept in a second volume. `docker-compose.yml`
+calls it `ssh-host-keys`, and `docker volume ls` usually lists it as
+`<folder>_ssh-host-keys`. The container makes its host keys the first time it
+starts with a new volume. The volume keeps them the same after
+`docker compose down`, `docker compose up -d`, and a rebuild. Your computer
+uses them to tell that it connects to the same container.
+
 R packages that bspm installs as Ubuntu binaries go to a system folder outside
 the home folder, so they are not kept. Each time the container is made new (for
 example after `docker compose down`, or `docker compose up -d --build` after an
@@ -115,7 +122,20 @@ docker compose down --rmi all
 
 To close the container and delete your files, use the command below. Copy out
 any files you want to keep first, because it deletes the `home` volume and every
-file in it:
+file in it. It also deletes the `ssh-host-keys` volume, so the next start makes
+new host keys:
 ```
 docker compose down -v
 ```
+
+If `ssh` warns `REMOTE HOST IDENTIFICATION HAS CHANGED` and does not connect,
+the container has new host keys. This happens after `docker compose down -v`,
+and once after you update from a version of this image that had its host keys
+built in. Remove the old key that your computer remembers, then connect again
+and accept the new key.
+
+In terminal (bash/powershell):
+```
+ssh-keygen -R "[127.0.0.1]:2222"
+```
+If you changed `SSHPORT`, replace `2222` with your port.
