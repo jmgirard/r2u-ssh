@@ -36,7 +36,7 @@ add a `.DS_Store` line to `.gitignore`, and add a `**/.DS_Store` line to `.docke
 
 - [x] T1: `git rm --cached .DS_Store`; add `.DS_Store` to `.gitignore` and `**/.DS_Store` to
       `.dockerignore`.
-- [ ] T2: Run the throwaway context build with planted files, with and without the
+- [x] T2: Run the throwaway context build with planted files, with and without the
       `.dockerignore` line (then delete the planted files), and run hadolint and `docker build`.
 
 ## Work log
@@ -49,6 +49,9 @@ add a `.DS_Store` line to `.gitignore`, and add a `**/.DS_Store` line to `.docke
 - 2026-11-05: criteria audit (reduced mode): 1 finding, fixed — AC2 now probes the built context with planted `.DS_Store` files instead of checking only that an ignore line exists.
 - 2026-11-05: implement started on branch m005-untrack-ds-store, cut from origin/main at 006fadb; the working tree's only stray change was the root `.DS_Store` itself, which T1 untracks.
 - 2026-11-05: T1 done — root `.DS_Store` removed from the index (file kept on disk), `.DS_Store` added to `.gitignore`, `**/.DS_Store` appended to `.dockerignore`; `git ls-files` lists 0 `.DS_Store` paths; hadolint clean, `docker build` succeeded.
+- 2026-11-05: T2 probe choices: `FROM busybox:1.37`, the AC's RUN plus two listing steps (`ls -A /ctx /ctx/probe-sub`, `find /ctx -name .DS_Store`) so the copied context is shown non-empty and the failure is shown to come from the planted files; the root plant was the existing on-disk `.DS_Store`, the subdirectory plant `probe-sub/.DS_Store`.
+- 2026-11-05: T2 done — with `**/.DS_Store` in `.dockerignore` the probe build exited 0 and listed no `.DS_Store`; with the line removed it exited 1 at the `! find … | grep -q .` step after `find` printed `/ctx/.DS_Store` and `/ctx/probe-sub/.DS_Store`; line restored (no diff), `probe-sub/` deleted; hadolint clean, `docker build` succeeded.
+- 2026-11-05: the probe listing showed `CLAUDE.md` in the build context; outside Scope, so filed as candidate row "Keep CLAUDE.md out of the build context".
 
 ## Decisions
 
