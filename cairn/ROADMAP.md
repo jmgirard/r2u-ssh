@@ -9,7 +9,7 @@ _Last hygiene check: 2026-11-05 — M06 archived; less row graduated; M03 row pr
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M07 | Mount-key smoke tests | planned | — | normal | milestones/M07-mount-key-smoke.md |
+| M07 | Mount-key smoke tests | review | — | normal | milestones/M07-mount-key-smoke.md |
 | M06 | Add less as git's pager | done | — | low | milestones/archive/M06-less-pager.md |
 | M05 | Untrack .DS_Store | done | — | normal | milestones/archive/M05-untrack-ds-store.md |
 | M04 | CI build workflow | done | — | normal | milestones/archive/M04-ci-workflow.md |
@@ -22,3 +22,4 @@ _Last hygiene check: 2026-11-05 — M06 archived; less row graduated; M03 row pr
 - [low] Keep CLAUDE.md out of the build context: the M05 context probe listed `CLAUDE.md` in the copied context because `.dockerignore` does not exclude it; the Dockerfile copies only `boot-sshd.sh`, so the image is unaffected — added 2026-11-05 — M05 T2
 - [low] Rename the stale references ignore entry: `cairn_validate` WARNs that the `.gitignore` entry `cairn/references/pdf/` is superseded by `cairn/references/sources/`; fix by `/cairn-init` repair; low because the warning is advisory and no PDF shelf exists — added 2026-11-05 — M05 review
 - [parked] Explain git safe.directory for mounts: a host repo bind-mounted under another UID hits git's dubious-ownership error; no documented setup mounts one; promote when a user reports it — added 2026-11-05 — M03 review
+- [parked] Make smoke SSH ignore the user's config: `ssh_as` in `test/smoke.sh` still reads the host's `~/.ssh/config`, so a personal `IdentityFile` or host setting reaches the checks; `-F /dev/null` would isolate them; no false PASS is possible; promote when a user reports it — added 2026-11-05 — M07 review diff-bug #8
