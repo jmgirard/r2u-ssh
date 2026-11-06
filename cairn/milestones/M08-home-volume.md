@@ -126,3 +126,34 @@ Evidence gathered 2026-11-05 on m08-home-volume at 4697cdc; main had not moved (
 - AC4: read README.md Step 6: `docker compose down` keeps image and files, `docker compose down --rmi all` removes the image and keeps files, `docker compose down -v` deletes the `home` volume and its files; a paragraph says R packages bspm installs as Ubuntu binaries are not kept and are installed again with `install.packages()`. The three commands shown are bare `docker compose` lines in plain fences, with no shell syntax.
 - AC5: read CHANGELOG.md `[Unreleased]` > Changed: entries say home-folder files survive `docker compose down`, `docker compose down -v` deletes them, binary R packages (bspm or apt) are not kept, and `positron_cache` is no longer used, found with `docker volume ls` (usually `<folder>_positron_cache`) and removed with `docker volume rm <folder>_positron_cache`.
 - gate: cairn_validate all checks passed (1 standing advisory: the `cairn/references/pdf/` ignore entry, an existing candidate row); no DESIGN principle changed, so cairn_impact skipped; hadolint clean; `docker build` from the repo context succeeded in the smoke run; base pinned to the explicit `rocker/r2u:24.04` tag; no secrets in ENV/ARG/COPY (only the public BASE_DIGEST arg and the boot script); `.dockerignore` present; CHANGELOG Unreleased has this milestone's entries.
+- spawned: diff-bug, blame-history, prior-review, ripple (diff-bug and blame-history were resumed once after API errors).
+- diff-bug #1: rocker's UID is not fixed, so a base change could leave kept home files owned by an old UID — fix now: Dockerfile pins UID/GID 1002, smoke asserts it (planted 1003 went red), DESIGN User bullet and changelog say so, fixed 5cf0fe1.
+- diff-bug #2: mid-test `compose down` unguarded under `set -e` — fix now: FAIL line on failure, fixed 5cf0fe1.
+- diff-bug #3: final `compose down -v` unguarded — fix now, fixed 5cf0fe1.
+- diff-bug #4: a pre-existing volume gives a FAIL then a misleading down -v PASS — fix now: the down -v check runs only on a volume this run created, fixed 5cf0fe1.
+- diff-bug #5: a failed sentinel write is reported as "lost" — fix now: its own FAIL line, fixed 5cf0fe1.
+- diff-bug #6: `compose_up` hides compose's error output — fix now: FAIL lines carry the last 200 bytes of `compose up` output, fixed 5cf0fe1.
+- diff-bug #7: an exported DOCKER_DEFAULT_PLATFORM that mismatches the built image fails the `pull_policy: never` up — reject (edge): a cross-platform override is outside the smoke script's documented use, the effect is an error, and the existing `docker run` tests share it.
+- diff-bug #8: `--force-recreate` is redundant — reject (planned change): T2 named it, and it states the intent.
+- diff-bug #9: changelog `docker volume rm <folder>_positron_cache` pastes badly and fails "in use" before the first new `up` — fix now: says to run it after that `up` and to follow `docker volume rm` with the name (observed "volume is in use" before, success after), fixed 5cf0fe1.
+- diff-bug #10: changelog "copy out" names no command and the wrong deadline — fix now: before the first `up`, with `docker compose cp r2u-ssh:/home/rocker/<file> .` (observed working), fixed 5cf0fe1.
+- diff-bug #11: README says packages are lost only after `down` — fix now: each time the container is made new, `up -d --build` named, fixed 5cf0fe1.
+- diff-bug #12: users are not told image changes to home skip existing volumes — follow-up: new [parked] row "Bring image home changes to old volumes" (promote when the image adds a home file existing users need; no documented use is affected today).
+- diff-bug tests: owner and write checks overlap — reject (planned change): AC2 names both ownership and writability.
+- blame-history #1: image changes under /home/rocker never reach existing volumes — follow-up: same row as diff-bug #12.
+- blame-history #2: the home volume keeps user-stored credentials, against IP2 — reject (false): IP2 covers image layers, build args, git, and the build context; data a user stores at runtime on the trusted local host (GP1) is not baked in.
+- blame-history #3: unguarded `compose down` — fix now, same fix as diff-bug #2, fixed 5cf0fe1.
+- blame-history #4: a leaked volume blocks reruns — reject (false): each run's project name carries its own PID, so a later run uses a new volume.
+- blame-history #5: new code reads the port with `compose port` instead of `host_port` — reject (style): `host_port` takes a container id, and `compose port` prints one mapping, guarded by `|| true`.
+- blame-history #6: the update-loses-files note and positron_cache removal are documented — reject (false): it confirms planned behavior, no defect.
+- blame-history #7: README Step 6 fence lost its `bash` tag — reject (style).
+- prior-review #1: changelog "whole home folder" and "packages not kept" claims rest on one file — reject (false): the mount target is checked by AC1's config read and the file check fails without it; package loss was observed (m08obs) and is bspm/apt behavior.
+- prior-review #2: positron_cache removal untested — reject (false): AC1's config read finds 0 mentions.
+- prior-review #3: unguarded `compose down` — fix now, same as diff-bug #2, fixed 5cf0fe1.
+- prior-review #4: `ssh_as` reads the user's ~/.ssh/config and the new tests inherit it — follow-up: the existing [parked] row "Make smoke SSH ignore the user's config" covers it unchanged.
+- prior-review #5: README claims on setup files and the Positron server are untested — reject (false): both live under the mounted /home/rocker; the claim audit read them against the image.
+- prior-review #6: an empty CPORT gives a 30 s wait and a reasonless FAIL — fix now, covered by the diff-bug #6 fix (FAIL lines carry compose output), fixed 5cf0fe1.
+- prior-review #7: fence tag changed from bash to plain — reject (style).
+- ripple #1: the "Keep user work across compose down" candidate row is now stale — reject (planned change): post-merge hygiene graduates the row this milestone started.
+- ripple #2: the "Smoke-test the Positron server install" row says smoke checks only SSH and bspm — fix now: row text updated, fixed 5cf0fe1.
+- re-verify after fixes: hadolint clean, shellcheck clean, smoke 21/21, no smoke volumes left.
