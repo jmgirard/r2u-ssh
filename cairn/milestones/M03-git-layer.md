@@ -3,7 +3,7 @@
      Per-section owners are tagged below. -->
 # M03: Bake in git
 
-- **Status:** in-progress   <!-- owner: transitioning skill · mirror-update; cairn/ROADMAP.md is the authority -->
+- **Status:** review   <!-- owner: transitioning skill · mirror-update; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- owner: plan · create/amend-via-gate; high | normal | low -->
 - **Depends on:** —   <!-- owner: plan · create/amend-via-gate; M<xx>, M<yy> or — -->
 - **Principles touched:** GP2   <!-- owner: plan · create/amend-via-gate; comma-separated IPn/GPn ids this milestone touches, or — -->
@@ -76,6 +76,9 @@ changelog to reflect git as baked in; record the dependency addition (D-003).
 - 2026-11-05: T2 done — smoke Test 6 asserts `git --version` over SSH as rocker (exit 0 + `^git version N.N`); with git removed from the Dockerfile it fails (exit 127, command not found), restored it passes; smoke 12/12; shellcheck v0.11.0 clean.
 - 2026-11-05: minor amendment: T3 also adds git to the README feature list (README lists what the image includes; leaving git out would be stale).
 - 2026-11-05: T3 done — DESIGN "image provides" list, extras-bar convention, GP2 example, and Function Families stage 3 name git as baked in; CHANGELOG Added entry and README bullet written against an observed run (no git config at any level, no git-lfs, in the built image).
+- 2026-11-05: claim audit run although the file has no `Surface tier:` slot, because the diff adds user-facing README/CHANGELOG text.
+- 2026-11-05: claim audit: 9 claims read, 0 corrected — CHANGELOG.md, README.md, test/smoke.sh
+- 2026-11-05: all tasks done; verify clean (hadolint v2.15.1, docker build, smoke 12/12); status → review.
 
 ## Decisions
 <!-- owner: implement / review · append-only; milestone-local; promote
