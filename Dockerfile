@@ -30,7 +30,11 @@ LABEL org.opencontainers.image.base.digest="${BASE_DIGEST}"
 # 2. Create non-root user (rocker)
 # ------------------------------------------------------------
 
-RUN useradd -m -s /bin/bash rocker \
+# Fixed UID/GID 1002 (the value useradd picked on this base), so files kept in
+# the compose `home` volume stay owned by rocker after a rebuild. If the base
+# ever takes 1002 itself, the build fails here instead of shifting the UID.
+RUN groupadd -g 1002 rocker \
+    && useradd -m -u 1002 -g rocker -s /bin/bash rocker \
     && install -d -m 700 -o rocker -g rocker /home/rocker/.ssh
 
 # ------------------------------------------------------------

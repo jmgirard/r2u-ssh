@@ -2,7 +2,7 @@
 # Smoke / regression harness for the r2u-ssh image.
 #
 # Verifies the image's runtime-contract behaviors end to end:
-#   1. USERNAME is gone and the SSH user is `rocker`.
+#   1. USERNAME is gone and the SSH user is `rocker`, with UID and GID 1002.
 #   2. Fail-closed: a keyless container exits non-zero with a clear error.
 #   3. Core contract (IP3): with a key, sshd starts, SSH connects as rocker,
 #      and bspm installs a binary R package.
@@ -131,6 +131,10 @@ if wait_for_ssh "$PORT"; then
   ok "sshd starts and accepts the key"
   WHO="$(ssh_run "$PORT" 'whoami' | tr -d '\r\n')"
   if [[ "$WHO" == "rocker" ]]; then ok "SSH user is rocker"; else bad "SSH user is '$WHO', expected rocker"; fi
+  # Fixed IDs keep files in a kept home volume owned by rocker across rebuilds.
+  # shellcheck disable=SC2016  # expanded by the remote shell, not here
+  IDS="$(ssh_run "$PORT" 'echo "$(id -u):$(id -g)"' 2>&1 | tr -d '\r\n' || true)"
+  if [[ "$IDS" == "1002:1002" ]]; then ok "rocker has UID and GID 1002"; else bad "rocker UID:GID is '$IDS', expected 1002:1002"; fi
   # bspm intercepts install.packages() and pulls the apt binary (r-cran-uuid).
   # Capture to a variable (not a pipe) so pipefail + grep's early exit can't
   # turn a successful install into a false failure.
@@ -253,21 +257,28 @@ compose() {  # compose <args...>   (repo compose file + smoke override)
 }
 
 CPORT=""
-compose_up() {  # compose_up <key-b64> [up options...]   (sets CPORT)
+UP_OUT=""
+compose_up() {  # compose_up <key-b64> [up options...]   (sets CPORT and UP_OUT)
   local key="$1" mapping
   shift
-  AUTHORIZED_KEYS_B64="$key" SSHPORT=0 compose up -d --no-build "$@" >/dev/null 2>&1 || return 1
+  UP_OUT="$(AUTHORIZED_KEYS_B64="$key" SSHPORT=0 compose up -d --no-build "$@" 2>&1)" || return 1
   mapping="$(compose port r2u-ssh 22 2>/dev/null || true)"
   CPORT="${mapping##*:}"
 }
+up_tail() { tail -c 200 <<<"$UP_OUT"; }   # last compose up output, for FAIL lines
 
 volume_exists() { docker volume inspect "$1" >/dev/null 2>&1; }
 
+VOL_OURS=0   # set once we know the home volume is ours to check and remove
 if volume_exists "$VOL"; then
   bad "home volume $VOL already exists before the first up"
-elif compose_up "$B64" && wait_for_ssh "$CPORT"; then
-  ssh_run "$CPORT" 'mkdir -p ~/work && printf "%s\n" keep-me > ~/work/sentinel.txt' || true
-  compose down >/dev/null 2>&1   # no -v: the home volume stays
+elif VOL_OURS=1 && compose_up "$B64" && wait_for_ssh "$CPORT"; then
+  if ! ssh_run "$CPORT" 'mkdir -p ~/work && printf "%s\n" keep-me > ~/work/sentinel.txt'; then
+    bad "could not write the test file in /home/rocker over SSH"
+  fi
+  if ! compose down >/dev/null 2>&1; then   # no -v: the home volume stays
+    bad "compose down (without -v) failed"
+  fi
   if compose_up "$B64" && wait_for_ssh "$CPORT"; then
     SENT="$(ssh_run "$CPORT" 'cat ~/work/sentinel.txt' 2>&1 || true)"
     if [[ "$(tr -d '\r' <<<"$SENT")" == "keep-me" ]]; then
@@ -300,24 +311,25 @@ elif compose_up "$B64" && wait_for_ssh "$CPORT"; then
         bad "old key was not refused after the key changed (exit $A_CODE); got: $A_OUT"
       fi
     else
-      bad "new key did not connect after recreating on the kept home volume"
+      bad "new key did not connect after recreating on the kept home volume; compose up said: $(up_tail)"
     fi
   else
-    bad "SSH did not connect after compose down and up"
+    bad "SSH did not connect after compose down and up; compose up said: $(up_tail)"
   fi
 else
-  bad "compose up with the repo's docker-compose.yml did not give an SSH connection"
+  bad "compose up with the repo's docker-compose.yml did not give an SSH connection; compose up said: $(up_tail)"
 fi
 
-if volume_exists "$VOL"; then
-  compose down -v >/dev/null 2>&1
-  if volume_exists "$VOL"; then
+if [[ $VOL_OURS -eq 1 ]]; then
+  if ! volume_exists "$VOL"; then
+    bad "home volume $VOL missing before compose down -v"
+  elif ! compose down -v >/dev/null 2>&1; then
+    bad "compose down -v failed"
+  elif volume_exists "$VOL"; then
     bad "compose down -v left the home volume $VOL"
   else
     ok "compose down -v removes the home volume"
   fi
-else
-  bad "home volume $VOL missing before compose down -v"
 fi
 
 # --- Summary ---------------------------------------------------------------

@@ -140,7 +140,9 @@ contract is:
   env var (base64-decoded at boot, then CR-stripped with one trailing newline
   guaranteed). No key (or an empty decoded key) → clear error and non-zero exit
   (fail closed).
-- **User:** always `rocker`, baked at build time; no configurability (D-002).
+- **User:** always `rocker`, UID and GID 1002, baked at build time; no
+  configurability (D-002). The fixed IDs keep files in a kept home volume owned
+  by `rocker` across rebuilds.
 - **Entrypoint:** `CMD ["/usr/local/bin/boot-sshd.sh"]` → `exec sshd -D -e`.
 - **State:** the `home` named volume at `/home/rocker` persists user files,
   settings, and the Positron remote server across container recreations;

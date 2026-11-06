@@ -94,14 +94,14 @@ You'll now be connected to a full R environment running inside Docker.
 Your files in the container's home folder (`/home/rocker`) are kept in a Docker
 volume. `docker-compose.yml` calls it `home`. `docker volume ls` usually lists
 it as `<folder>_home`, where `<folder>` is the name of your clone folder in
-lowercase. This includes your projects, cloned
-repositories, your git and shell setup files, and the Positron server. When the
-container is removed, the volume stays. Your files are there again the next
-time you run `docker compose up -d`.
+lowercase. This includes your projects, cloned repositories, your git and shell
+setup files, and the Positron server. When the container is removed, the volume
+stays. Your files are there again the next time you run `docker compose up -d`.
 
 R packages that bspm installs as Ubuntu binaries go to a system folder outside
-the home folder, so they are not kept. After a `docker compose down`, install
-them again with `install.packages()`.
+the home folder, so they are not kept. Each time the container is made new (for
+example after `docker compose down`, or `docker compose up -d --build` after an
+update), install them again with `install.packages()`.
 
 To close the container but keep the image and your files, use:
 ```
