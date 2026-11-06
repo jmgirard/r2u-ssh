@@ -1,13 +1,13 @@
 # M08: Keep user work across compose down
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** IP3, GP6, GP7
 - **Resolves:** —
 - **Surface tier:** user-facing — the compose file and README are what users run and follow
-- **Branch/PR:** —
+- **Branch/PR:** m08-home-volume
 
 ## Goal
 
@@ -65,7 +65,7 @@ keys (the candidate row "Generate SSH host keys at boot").
 
 ## Tasks
 
-- [ ] T1: In `docker-compose.yml` (lines 9-12), replace the
+- [x] T1: In `docker-compose.yml` (lines 9-12), replace the
       `positron_cache:/home/rocker/.positron-server` mount and its top-level
       entry with a named volume `home` mounted at `/home/rocker`. Check AC1 with
       `docker compose -f docker-compose.yml --env-file /dev/null config`.
@@ -105,6 +105,8 @@ keys (the candidate row "Generate SSH host keys at boot").
 - 2026-11-05: plan gate chose one named volume for all of /home/rocker over a ~/work-only volume and a host-folder mount, because it keeps files saved anywhere in home and works the same on every host (the host mount is unwritable by UID 1002 on Linux); falsified by users needing their files on the host, or an image change to home files that existing volumes must get.
 - 2026-11-05: plan chose dropping `positron_cache` over keeping it nested under the home volume, because the home volume already holds `~/.positron-server`; falsified by Positron failing to install its server on the home volume.
 - 2026-11-05: plan gate chose a README note for binary R packages over a volume on the system library, because that volume would hide package updates from a rebuilt image and leave apt's records out of step; falsified by users reporting reinstall time as a real cost.
+- 2026-11-05: implement started; branch m08-home-volume cut from main at 03d1325.
+- 2026-11-05: T1 done: compose mounts named volume `home` at /home/rocker; `config` with `--env-file /dev/null` and only AUTHORIZED_KEYS_B64 set lists one volume (type volume, target /home/rocker, project volume r2u-ssh_home) and no positron_cache.
 
 ## Decisions
 

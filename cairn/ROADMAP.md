@@ -9,7 +9,7 @@ _Last hygiene check: 2026-11-05 — M07 archived; mount-coverage row graduated, 
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M08 | Keep user work across compose down | planned | — | high | milestones/M08-home-volume.md |
+| M08 | Keep user work across compose down | in-progress | — | high | milestones/M08-home-volume.md |
 | M07 | Mount-key smoke tests | done | — | normal | milestones/archive/M07-mount-key-smoke.md |
 | M06 | Add less as git's pager | done | — | low | milestones/archive/M06-less-pager.md |
 | M05 | Untrack .DS_Store | done | — | normal | milestones/archive/M05-untrack-ds-store.md |

@@ -7,6 +7,6 @@ services:
     environment:
         - AUTHORIZED_KEYS_B64=${AUTHORIZED_KEYS_B64}
     volumes:
-        - positron_cache:/home/rocker/.positron-server
+        - home:/home/rocker
 volumes:
-    positron_cache:
+    home:
