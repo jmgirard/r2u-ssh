@@ -1,6 +1,6 @@
 # M04: CI build workflow
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -52,10 +52,10 @@ optional; not requested).
       `actions/checkout` at a pinned major tag, then the hadolint, shellcheck, and smoke steps
       with the commands from LESSONS (hadolint reads `Dockerfile` on stdin; shellcheck mounts
       the repo read-only). No `continue-on-error` and no `||` in any `run:` block.
-- [ ] T2: Run actionlint from Docker on the workflow, the AC4 grep, the hadolint and shellcheck
+- [x] T2: Run actionlint from Docker on the workflow, the AC4 grep, the hadolint and shellcheck
       commands on the real files and on temp copies with one planted violation each (record
       each exit code), and `test/smoke.sh` locally.
-- [ ] T3: Update the "Platform-biased testing" entry in `cairn/DESIGN.md` Known issues.
+- [x] T3: Update the "Platform-biased testing" entry in `cairn/DESIGN.md` Known issues.
 
 ## Work log
 
@@ -72,6 +72,10 @@ optional; not requested).
 
 - 2026-11-05: implement started on m004-ci-workflow; the unrelated local `.DS_Store` change stays unstaged (M05 handles it).
 - 2026-11-05: T1 done: `.github/workflows/ci.yml` with `actions/checkout@v7` (latest release v7.0.1), `permissions: contents: read`, and one job `build-and-smoke`; added `.github` to `.dockerignore` so the new directory stays out of the build context (minor amendment).
+- 2026-11-05: T2 done: actionlint 1.7.12 exit 0 on ci.yml (a planted undefined-property workflow exits 1); masking grep exit 1 (no match); hadolint exit 0 on Dockerfile, exit 1 on a copy with `RUN cd /tmp` (DL3003, line 101); shellcheck exit 0 on both scripts, exit 1 on a boot-sshd.sh copy with `ls $HOME_DIR` (SC2086, line 49); local smoke 12 passed, 0 failed.
+- 2026-11-05: T3 done: DESIGN Known issues "Platform-biased testing" names CI's amd64 coverage and says arm64 and Windows PowerShell stay manual.
+- 2026-11-05: claim audit: not owed — internal tier.
+- 2026-11-05: implement done; status review.
 
 ## Decisions
 

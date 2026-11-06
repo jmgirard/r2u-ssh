@@ -148,5 +148,8 @@ Confirmed by the maintainer (2026-07-17 design interview):
   encoding — but the Windows PowerShell path still relies on README-follower
   testing (see below).
 - **Platform-biased testing.** Daily testing is the maintainer's Apple Silicon
-  Mac; the Windows/PowerShell path and plain-amd64 servers are exercised mainly
-  by README followers — the audience least equipped to debug.
+  Mac. Since M04, CI (`.github/workflows/ci.yml`) lints, builds, and runs
+  `test/smoke.sh` on amd64 for every pull request into main and every push to
+  main that changes files outside `cairn/`. arm64 and the Windows PowerShell
+  path stay manual: arm64 is tested on the maintainer's Mac, and Windows
+  mainly by README followers, the audience least equipped to debug.
