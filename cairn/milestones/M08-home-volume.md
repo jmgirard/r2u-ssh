@@ -27,28 +27,28 @@ keys (the candidate row "Generate SSH host keys at boot").
 
 ## Acceptance criteria
 
-- [ ] AC1: `docker compose -f docker-compose.yml config`, run with no `.env`
+- [x] AC1: `docker compose -f docker-compose.yml config`, run with no `.env`
       file read and only `AUTHORIZED_KEYS_B64` exported, succeeds and lists
       exactly one volume for the `r2u-ssh` service, with `type: volume` and
       `target: /home/rocker`. Neither the service nor the top-level `volumes:`
       names `positron_cache`.
-- [ ] AC2: Starting from a newly created home volume, with the repo's
+- [x] AC2: Starting from a newly created home volume, with the repo's
       `docker-compose.yml` plus an override that changes only the image tag and
       its build and pull policy, a file written under `/home/rocker` over SSH as
       `rocker` still has the same content after `docker compose down` (without
       `-v`) and `docker compose up -d`, is owned by `rocker`, and can be written
       again by `rocker` over SSH. A `test/smoke.sh` check shows this.
-- [ ] AC3: In the same setup, after the authorized key changes and the
+- [x] AC3: In the same setup, after the authorized key changes and the
       container is recreated on the existing home volume, SSH with the old key
       is refused and SSH with the new key connects. A `test/smoke.sh` check
       shows this.
-- [ ] AC4: README Step 6 says, for each of `docker compose down`,
+- [x] AC4: README Step 6 says, for each of `docker compose down`,
       `docker compose down --rmi all`, and `docker compose down -v`, whether
       files under `/home/rocker` are kept, and says that R packages installed
       as Ubuntu binaries (through bspm or apt) are not kept and must be
       installed again. Every command Step 6 shows is a `docker compose` command
       with no shell-specific syntax.
-- [ ] AC5: `CHANGELOG.md` `[Unreleased]` has an entry stating that files in
+- [x] AC5: `CHANGELOG.md` `[Unreleased]` has an entry stating that files in
       the home folder now survive `docker compose down`, that
       `docker compose down -v` deletes them, that R packages installed as
       Ubuntu binaries are not kept, and that the old `<folder>_positron_cache`
@@ -117,3 +117,12 @@ keys (the candidate row "Generate SSH host keys at boot").
 ## Decisions
 
 ## Review
+
+Evidence gathered 2026-11-05 on m08-home-volume at 4697cdc; main had not moved (merge base 03d1325 = origin/main).
+
+- AC1: `docker compose -f docker-compose.yml --env-file /dev/null config` under `env -i` with only AUTHORIZED_KEYS_B64 (plus PATH/HOME) exited 0; the service lists one volume, `type: volume`, `source: home`, `target: /home/rocker`; top-level `volumes:` holds only `home` (name r2u-ssh_home); `positron_cache` appears 0 times.
+- AC2: fresh `test/smoke.sh` run: 20 passed, 0 failed. Test 10 (project r2u-ssh-smoke-<pid>, repo compose file plus an image-only override with `pull_policy: never`) passed "file in /home/rocker survives compose down and up", "kept file is owned by rocker", "rocker can write the kept file after the restart"; the test first confirms the project volume does not yet exist. No smoke volumes left after the run. Red on origin/main recorded in the work log (T2).
+- AC3: same run: Test 11 passed "changed key replaces the old one on a kept home volume" (recreated with key B via `up -d --force-recreate`, key B connected, key A got `Permission denied`). A planted append-keys boot-sshd.sh turned it red (work log, T2).
+- AC4: read README.md Step 6: `docker compose down` keeps image and files, `docker compose down --rmi all` removes the image and keeps files, `docker compose down -v` deletes the `home` volume and its files; a paragraph says R packages bspm installs as Ubuntu binaries are not kept and are installed again with `install.packages()`. The three commands shown are bare `docker compose` lines in plain fences, with no shell syntax.
+- AC5: read CHANGELOG.md `[Unreleased]` > Changed: entries say home-folder files survive `docker compose down`, `docker compose down -v` deletes them, binary R packages (bspm or apt) are not kept, and `positron_cache` is no longer used, found with `docker volume ls` (usually `<folder>_positron_cache`) and removed with `docker volume rm <folder>_positron_cache`.
+- gate: cairn_validate all checks passed (1 standing advisory: the `cairn/references/pdf/` ignore entry, an existing candidate row); no DESIGN principle changed, so cairn_impact skipped; hadolint clean; `docker build` from the repo context succeeded in the smoke run; base pinned to the explicit `rocker/r2u:24.04` tag; no secrets in ENV/ARG/COPY (only the public BASE_DIGEST arg and the boot script); `.dockerignore` present; CHANGELOG Unreleased has this milestone's entries.
