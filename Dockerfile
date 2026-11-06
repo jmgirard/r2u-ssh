@@ -34,13 +34,13 @@ RUN useradd -m -s /bin/bash rocker \
     && install -d -m 700 -o rocker -g rocker /home/rocker/.ssh
 
 # ------------------------------------------------------------
-# 3. Install OpenSSH server, Positron download tools, and git
+# 3. Install OpenSSH server, Positron download tools, git, and less
 # ------------------------------------------------------------
 
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        openssh-server curl wget ca-certificates tar gzip xz-utils git \
+        openssh-server curl wget ca-certificates tar gzip xz-utils git less \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /var/run/sshd

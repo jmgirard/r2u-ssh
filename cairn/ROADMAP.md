@@ -9,7 +9,7 @@ _Last hygiene check: 2026-11-05 — M05 archived; .DS_Store row graduated; CLAUD
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M06 | Add less as git's pager | planned | — | low | milestones/M06-less-pager.md |
+| M06 | Add less as git's pager | review | — | low | milestones/M06-less-pager.md |
 | M05 | Untrack .DS_Store | done | — | normal | milestones/archive/M05-untrack-ds-store.md |
 | M04 | CI build workflow | done | — | normal | milestones/archive/M04-ci-workflow.md |
 | M03 | Bake in git | done | — | normal | milestones/archive/M03-git-layer.md |
