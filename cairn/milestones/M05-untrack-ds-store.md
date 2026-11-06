@@ -65,3 +65,18 @@ add a `.DS_Store` line to `.gitignore`, and add a `**/.DS_Store` line to `.docke
 - AC3 evidence (2026-11-05): `hadolint/hadolint:v2.15.1` on `Dockerfile` exit 0, no output; `docker build --no-cache .` exit 0.
 - gate: `cairn_validate.py` exit 0, all checks passed; 1 advisory WARN (pre-existing `.gitignore` entry `cairn/references/pdf/` superseded by `cairn/references/sources/`), not a gate failure.
 - gate (profile): hadolint clean and `docker build --no-cache` succeeded (AC3); base pinned by explicit tag `rocker/r2u:24.04` with optional `BASE_DIGEST`; the diff adds no `ENV`, `COPY`, or build args; `.dockerignore` present and excludes `.git` and now `**/.DS_Store`; `CLAUDE.md` still reaches the context (pre-existing, outside Scope, filed as candidate row "Keep CLAUDE.md out of the build context"); no changelog entry owed, because the image and its interface do not change.
+- spawned: diff-bug, blame-history, prior-review, ripple
+- diff-bug #1: pulling the deletion makes git refuse in a clone whose root `.DS_Store` differs, or deletes a matching one — reject, planned change: any untracking does this once, and Finder recreates the file.
+- diff-bug #2: the old blob stays in history — reject, false: `git show main:.DS_Store | strings` shows only the `Bud1`/`DSDB` headers, no names.
+- diff-bug #3: AppleDouble `._*` and `.AppleDouble/` are not ignored — reject, planned change: Scope Out excludes other context noise, and no such file exists in the tree.
+- diff-bug #4: pattern syntax is correct in git and Docker — reject, false: reports no defect.
+- diff-bug #5: nothing the build or CI needs is excluded — reject, false: reports no defect.
+- diff-bug #6: tracking text matches the code — reject, false: reports no defect.
+- diff-bug #7: Branch/PR holds only the branch name — reject, false: step 8 records the PR URL once the PR opens.
+- diff-bug #8: `cairn_validate` WARN on the `cairn/references/pdf/` ignore entry is unrelated and pre-existing — follow-up: candidate row "Rename the stale references ignore entry" [low, advisory only].
+- blame-history: no findings.
+- prior-review: no findings (archive Review sections M01–M04 read; PR inline-comment probe returned `[]`).
+- ripple #1: `cairn/PROFILE.md` consistency-gate says stray context is drift, while `CLAUDE.md` still reaches the context — follow-up: absorbed into candidate row "Keep CLAUDE.md out of the build context" [low, image unaffected].
+- ripple #2: ROADMAP row "Untrack the build-context `.DS_Store`" still open — reject, false: it carries `started M05`, and step 9 hygiene graduates it at merge.
+- ripple #3: `cairn/PROFILE.md` line on `cairn/` in `.dockerignore` — reject, false: still true, reporter marked it not stale.
+- ripple #4: `cairn/DESIGN.md` IP2 on nothing sensitive copied — reject, false: still true, reporter marked it not stale.
