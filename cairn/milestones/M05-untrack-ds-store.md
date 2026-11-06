@@ -22,9 +22,9 @@ add a `.DS_Store` line to `.gitignore`, and add a `**/.DS_Store` line to `.docke
 
 ## Acceptance criteria
 
-- [ ] AC1: `git ls-files` on the milestone branch lists no path whose last component is `.DS_Store`.
-- [ ] AC2: `.gitignore` contains a `.DS_Store` line, and a throwaway build of the repo context (`FROM busybox`, `COPY . /ctx`, `RUN ! find /ctx -name .DS_Store | grep -q .`, passed on stdin with `docker build -f - .`) succeeds with a `.DS_Store` planted at the repo root and in a subdirectory, and fails with the `.dockerignore` line removed.
-- [ ] AC3: `hadolint` reports no violations on `Dockerfile` and `docker build` succeeds.
+- [x] AC1: `git ls-files` on the milestone branch lists no path whose last component is `.DS_Store`.
+- [x] AC2: `.gitignore` contains a `.DS_Store` line, and a throwaway build of the repo context (`FROM busybox`, `COPY . /ctx`, `RUN ! find /ctx -name .DS_Store | grep -q .`, passed on stdin with `docker build -f - .`) succeeds with a `.DS_Store` planted at the repo root and in a subdirectory, and fails with the `.dockerignore` line removed.
+- [x] AC3: `hadolint` reports no violations on `Dockerfile` and `docker build` succeeds.
 
 ## Coverage
 
@@ -54,7 +54,14 @@ add a `.DS_Store` line to `.gitignore`, and add a `**/.DS_Store` line to `.docke
 - 2026-11-05: the probe listing showed `CLAUDE.md` in the build context; outside Scope, so filed as candidate row "Keep CLAUDE.md out of the build context".
 - 2026-11-05: claim audit: not owed — internal tier
 - 2026-11-05: all tasks checked, verify clean (hadolint, `docker build`); status → review.
+- 2026-11-05: review checkpoint — AC1–AC3 evidenced and ticked, consistency gate passed; four review lenses spawned, findings not yet settled.
 
 ## Decisions
 
 ## Review
+
+- AC1 evidence (2026-11-05, branch head 755b5d0): `git ls-files | awk -F/ '$NF==".DS_Store"'` returns 0 of 24 tracked paths; the same filter over `git ls-tree -r main` returns `.DS_Store`, so the check can fire; the root file stays on disk and `git check-ignore -v` names `.gitignore:2:.DS_Store`.
+- AC2 evidence (2026-11-05): `.gitignore` line 2 is `.DS_Store`, `.dockerignore` line 10 is `**/.DS_Store`; probe (`FROM busybox:1.37`, `COPY . /ctx`, listing steps, then the AC's `RUN ! find /ctx -name .DS_Store | grep -q .`, via `docker build --no-cache -f - .`) with `.DS_Store` at the root and in `probe-sub/`: exit 0, context listed non-empty with `probe-sub/` empty; with the line removed: exit 1 at the AC's RUN step after `find` printed `/ctx/.DS_Store` and `/ctx/probe-sub/.DS_Store`; line restored (`git diff` clean), plant deleted.
+- AC3 evidence (2026-11-05): `hadolint/hadolint:v2.15.1` on `Dockerfile` exit 0, no output; `docker build --no-cache .` exit 0.
+- gate: `cairn_validate.py` exit 0, all checks passed; 1 advisory WARN (pre-existing `.gitignore` entry `cairn/references/pdf/` superseded by `cairn/references/sources/`), not a gate failure.
+- gate (profile): hadolint clean and `docker build --no-cache` succeeded (AC3); base pinned by explicit tag `rocker/r2u:24.04` with optional `BASE_DIGEST`; the diff adds no `ENV`, `COPY`, or build args; `.dockerignore` present and excludes `.git` and now `**/.DS_Store`; `CLAUDE.md` still reaches the context (pre-existing, outside Scope, filed as candidate row "Keep CLAUDE.md out of the build context"); no changelog entry owed, because the image and its interface do not change.
