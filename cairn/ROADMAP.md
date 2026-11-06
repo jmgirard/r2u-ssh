@@ -19,3 +19,5 @@ _Last hygiene check: 2026-07-17_
 - Untrack the build-context `.DS_Store` (tracked + not in .dockerignore) — added 2026-07-17 — consistency-gate drift
 - Mount-source smoke coverage: exercise /keys/authorized_keys branch + mount-wins precedence — added 2026-07-17 — M01 review F1
 - Verify README Windows PowerShell .env recipe on real Windows (M01 AC4 deferred) — added 2026-07-17 — M01 AC4
+- [low] Add less so git gets a full pager: `--no-install-recommends` drops git's recommended `less`, so `git log`/`diff` page through `more`; works, less pleasant; adding it is a dependency change — added 2026-11-05 — M03 review
+- [parked] Explain git safe.directory for mounts: a host repo bind-mounted under another UID hits git's dubious-ownership error; no documented setup mounts one; promote when a user reports it — added 2026-11-05 — M03 review

@@ -103,3 +103,29 @@ changelog to reflect git as baked in; record the dependency addition (D-003).
 - `cairn_validate.py`: exit 0, all checks passed; 1 advisory WARN (pre-existing `.gitignore` entry `cairn/references/pdf/` superseded), not a gate failure.
 - `cairn_impact.py --changed`: lists GP7 refs (DESIGN.md:77 new text, DESIGN.md:121 the principle, DECISIONS.md:35/46, this file); all agree that per-user git config stays a runtime concern. GP2 refs (DECISIONS.md:40-48, DESIGN.md:106) agree with the new text. Reconciled, no divergence.
 - Toolchain slot: hadolint clean and build OK (AC4); base pinned `FROM rocker/r2u:24.04` (explicit tag); diff adds no ENV/COPY/ARG lines (no secrets); `.dockerignore` present, excludes `.git`, `cairn/`, `test/`; CHANGELOG has the entry (AC3).
+
+### Independent review (2026-11-05)
+
+- spawned: diff-bug, blame-history, prior-review, ripple
+- diff-bug #1: Dockerfile:37 section-3 header still says only "Install OpenSSH server" — fix now, fixed 722b0ba
+- diff-bug #2: DESIGN.md:76-77 cites GP7 for not presetting git config, though a commit then needs user setup — reject (planned change: Scope Out and D-003 name per-user git config a runtime concern under GP7)
+- diff-bug #3: `--no-install-recommends` drops `less`, so git pages through `more` — follow-up, row "Add less so git gets a full pager" [low]: git works, and adding a package is a dependency change
+- diff-bug #4: GP2 line in DESIGN.md wraps past 80 columns — reject (style)
+- diff-bug #5: DESIGN.md:26 "the one day-one-universal extra" goes stale when a second tool clears the bar — fix now, fixed 722b0ba
+- diff-bug #6: README/CHANGELOG say "set your own" identity without naming the command — fix now (names `git config --global`), fixed 722b0ba
+- diff-bug #7: smoke.sh `^` anchor on output that merges ssh stderr could false-FAIL — fix now (anchor dropped; exit-code check kept), fixed 722b0ba
+- diff-bug #8: smoke.sh:4 header says "M01 runtime-contract behaviors" over a list that now spans three milestones — fix now, fixed 722b0ba
+- diff-bug #9: bind-mounted repos under another UID hit git's safe.directory error — follow-up, row "Explain git safe.directory for mounts" [parked]: docker-compose.yml and README mount no host project dir
+- diff-bug (c): smoke.sh:118 comment "(exit code and version string)" restates the code — fix now (parenthetical removed), fixed 722b0ba
+- blame-history #1: CHANGELOG says git "works in a Positron SSH session" but only plain SSH was run — fix now (reworded to `rocker` over SSH, the connection Positron uses), fixed 722b0ba
+- blame-history #2: D-003 "grows by one apt package" understates git + git-man + liberror-perl (~24 MB installed) — reject (false: the profile counts the packages a layer names, and the layer names one; size noted here)
+- blame-history #3: Dockerfile:37 header stale — fix now (same as diff-bug #1), fixed 722b0ba
+- blame-history #4: GP2 line wrap — reject (style)
+- blame-history (adjacent): tracked `.DS_Store` not in .dockerignore — follow-up, existing row "Untrack the build-context `.DS_Store`" (pre-existing, not from this diff)
+- prior-review: archived M01/M02 Review findings on touched files checked; no regression; GitHub PR threads empty — 0 findings
+- ripple #1: smoke.sh:2-3 "M01 runtime-contract" lead-in — fix now (same as diff-bug #8), fixed 722b0ba
+- ripple #2: README/CHANGELOG git claims lack a prebuilt-image lag caveat — reject (false: README.md already says the prebuilt image can lag, and the entry sits under [Unreleased])
+- ripple #3: Dockerfile:37 header stale — fix now (same as diff-bug #1), fixed 722b0ba
+- ripple #4: DESIGN "Positron affordances" bullet does not mention git — reject (false: git has its own bullet; no disagreement)
+- ripple #5: GP2 line wrap — reject (style)
+- re-verify after fixes: hadolint clean, shellcheck clean, smoke 12/12 (2026-11-05, head 722b0ba).
