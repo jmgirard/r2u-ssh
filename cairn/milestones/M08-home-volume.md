@@ -69,7 +69,7 @@ keys (the candidate row "Generate SSH host keys at boot").
       `positron_cache:/home/rocker/.positron-server` mount and its top-level
       entry with a named volume `home` mounted at `/home/rocker`. Check AC1 with
       `docker compose -f docker-compose.yml --env-file /dev/null config`.
-- [ ] T2: Add two compose checks to `test/smoke.sh` (AC2, AC3) and list them
+- [x] T2: Add two compose checks to `test/smoke.sh` (AC2, AC3) and list them
       in the header. Run compose under the project name `r2u-ssh-smoke-$$` so a
       user's own `r2u-ssh` volume is never touched. Write an override file in
       `$WORK` that sets `image:` to the smoke tag with `pull_policy: never`, and
@@ -107,6 +107,7 @@ keys (the candidate row "Generate SSH host keys at boot").
 - 2026-11-05: plan gate chose a README note for binary R packages over a volume on the system library, because that volume would hide package updates from a rebuilt image and leave apt's records out of step; falsified by users reporting reinstall time as a real cost.
 - 2026-11-05: implement started; branch m08-home-volume cut from main at 03d1325.
 - 2026-11-05: T1 done: compose mounts named volume `home` at /home/rocker; `config` with `--env-file /dev/null` and only AUTHORIZED_KEYS_B64 set lists one volume (type volume, target /home/rocker, project volume r2u-ssh_home) and no positron_cache.
+- 2026-11-05: T2 done: smoke Tests 10-11 run the repo compose file as project `r2u-ssh-smoke-$$` with an image-only override; `wait_for_ssh` takes an optional key; smoke 20/20 on the branch, shellcheck clean. Red shown in a worktree of origin/main: the 3 file checks and the volume check FAIL (main has no home volume); the key check passed there and went red only with a planted boot-sshd.sh that appends keys. No smoke volumes left behind.
 
 ## Decisions
 
