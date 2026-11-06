@@ -12,6 +12,9 @@
 #      name are present on the built image.
 #   6. git (GP2 day-one-universal extra) runs for rocker over SSH.
 #   7. git's default pager resolves to less (not more) for rocker over SSH.
+#   8. A key mounted at /keys/authorized_keys, with no env var, lets SSH connect.
+#   9. A mounted key wins over AUTHORIZED_KEYS_B64: the mounted key connects
+#      and the env-var key is refused.
 #
 # Usage: test/smoke.sh [image-tag]   (default tag: r2u-ssh:smoke — built here)
 set -euo pipefail
