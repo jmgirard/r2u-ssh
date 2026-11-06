@@ -34,8 +34,13 @@ trap cleanup EXIT
 ok()   { printf 'PASS: %s\n' "$1"; PASS=$((PASS + 1)); }
 bad()  { printf 'FAIL: %s\n' "$1"; FAIL=$((FAIL + 1)); }
 
-free_port() {
-  python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()'
+# Containers publish sshd with `-p 127.0.0.1::22` (empty host port), so Docker
+# picks a free port at bind time; read it back here.
+host_port() {  # host_port <container-id>
+  local mapping
+  mapping="$(docker port "$1" 22/tcp)"
+  mapping="${mapping%%$'\n'*}"   # first mapping only
+  printf '%s\n' "${mapping##*:}"
 }
 
 # --- Build -----------------------------------------------------------------
@@ -98,9 +103,9 @@ wait_for_ssh() {  # wait_for_ssh <port>
 
 # --- Test 1 & 3: user identity + core contract -----------------------------
 echo "== core contract (keyed run, SSH, bspm) =="
-PORT="$(free_port)"
-CID="$(docker run -d -p "127.0.0.1:${PORT}:22" -e "AUTHORIZED_KEYS_B64=${B64}" "$IMAGE")"
+CID="$(docker run -d -p 127.0.0.1::22 -e "AUTHORIZED_KEYS_B64=${B64}" "$IMAGE")"
 CONTAINERS+=("$CID")
+PORT="$(host_port "$CID")"
 if wait_for_ssh "$PORT"; then
   ok "sshd starts and accepts the key"
   WHO="$(ssh_run "$PORT" 'whoami' | tr -d '\r\n')"
@@ -142,9 +147,9 @@ fi
 # --- Test 4: CRLF sanitization ---------------------------------------------
 echo "== key sanitization (CRLF-contaminated) =="
 B64CR="$(printf '%s\r\n' "$PUB" | base64 | tr -d '\n')"   # trailing CRLF baked in
-PORT2="$(free_port)"
-CID2="$(docker run -d -p "127.0.0.1:${PORT2}:22" -e "AUTHORIZED_KEYS_B64=${B64CR}" "$IMAGE")"
+CID2="$(docker run -d -p 127.0.0.1::22 -e "AUTHORIZED_KEYS_B64=${B64CR}" "$IMAGE")"
 CONTAINERS+=("$CID2")
+PORT2="$(host_port "$CID2")"
 if wait_for_ssh "$PORT2"; then
   ok "CRLF-contaminated key still lets SSH connect"
 else

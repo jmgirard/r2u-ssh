@@ -9,7 +9,7 @@ _Last hygiene check: 2026-11-05 — M06 archived; less row graduated; M03 row pr
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M07 | Mount-key smoke tests | planned | — | normal | milestones/M07-mount-key-smoke.md |
+| M07 | Mount-key smoke tests | in-progress | — | normal | milestones/M07-mount-key-smoke.md |
 | M06 | Add less as git's pager | done | — | low | milestones/archive/M06-less-pager.md |
 | M05 | Untrack .DS_Store | done | — | normal | milestones/archive/M05-untrack-ds-store.md |
 | M04 | CI build workflow | done | — | normal | milestones/archive/M04-ci-workflow.md |

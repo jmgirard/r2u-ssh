@@ -1,13 +1,13 @@
 # M07: Mount-key smoke tests
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** IP1, IP2
 - **Resolves:** —
 - **Surface tier:** internal — changes only the smoke-test harness `test/smoke.sh`; the image and boot script are untouched
-- **Branch/PR:** —
+- **Branch/PR:** m07-mount-key-smoke
 
 ## Goal
 
@@ -44,7 +44,7 @@ Extend `test/smoke.sh` to cover the mounted-key boot path, publishing every test
 
 ## Tasks
 
-- [ ] T1: Replace `free_port` with `-p 127.0.0.1::22` on each `docker run` and a helper that reads the host port from `docker port <cid> 22/tcp`; delete `free_port`; run `test/smoke.sh` and confirm every existing check still passes.
+- [x] T1: Replace `free_port` with `-p 127.0.0.1::22` on each `docker run` and a helper that reads the host port from `docker port <cid> 22/tcp`; delete `free_port`; run `test/smoke.sh` and confirm every existing check still passes.
 - [ ] T2: Add the mount-only check: write key A's public half to `$WORK/keys/authorized_keys`, run with `-v "$WORK/keys:/keys:ro"` and no env var, and branch PASS/FAIL on the `ssh` exit status (capture output to a variable before grepping, per the M01 lesson).
 - [ ] T3: Add the precedence check: generate key B, mount key A and pass key B as `AUTHORIZED_KEYS_B64`; PASS only when key A connects and a `BatchMode=yes` session with key B exits non-zero printing `Permission denied`.
 - [ ] T4: Show each new check can fail (AC3), per the M06 lesson: `git worktree add --detach <dir> origin/main`, copy the branch's `test/smoke.sh` in, plant each `boot-sshd.sh` defect in turn, run with another image tag, log the FAIL lines in one work-log line, then remove the worktree.
@@ -61,6 +61,8 @@ Extend `test/smoke.sh` to cover the mounted-key boot path, publishing every test
 - 2026-11-05: criteria audit (reduced mode, fresh Opus reader): 4 findings, all fixed. AC1 tied PASS to an `if` on ssh's exit status; AC2 requires BatchMode and `Permission denied` so an unreachable sshd cannot pass; AC3 states the defect behavior and the worktree recipe moved to T4; AC4 bars `docker run` lines continued with `\`. AC5 none.
 - 2026-11-05: plan gate chose Docker-assigned ports over keeping `free_port` because the picker releases its port before Docker binds it; falsified by a run where `docker port` returns no port or a port that does not reach the container.
 - 2026-11-05: changelog: none; internal test-only change.
+- 2026-11-05: started on branch m07-mount-key-smoke; status in-progress.
+- 2026-11-05: T1 done: `free_port` replaced by `-p 127.0.0.1::22` and a `host_port` helper reading the first `docker port <cid> 22/tcp` mapping; local `test/smoke.sh` 13 passed, 0 failed.
 
 ## Decisions
 
