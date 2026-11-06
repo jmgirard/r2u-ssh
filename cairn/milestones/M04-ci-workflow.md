@@ -76,6 +76,7 @@ optional; not requested).
 - 2026-11-05: T3 done: DESIGN Known issues "Platform-biased testing" names CI's amd64 coverage and says arm64 and Windows PowerShell stay manual.
 - 2026-11-05: claim audit: not owed — internal tier.
 - 2026-11-05: implement done; status review.
+- 2026-11-05: step-7 approval: m004-ci-workflow approved for merge
 
 ## Decisions
 
