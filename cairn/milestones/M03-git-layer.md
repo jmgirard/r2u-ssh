@@ -32,14 +32,14 @@ changelog to reflect git as baked in; record the dependency addition (D-003).
 ## Acceptance criteria
 <!-- owner: plan · create/amend-via-gate; review reads, never reinterprets -->
 
-- [ ] In a running container, `git --version` executed **as `rocker` over SSH**
+- [x] In a running container, `git --version` executed **as `rocker` over SSH**
       exits 0 and prints a git version string — proven by a new assertion in
       `test/smoke.sh` (GP2 day-one-universal capability).
-- [ ] DESIGN.md's extras-bar convention and GP2 describe git as baked in — the
+- [x] DESIGN.md's extras-bar convention and GP2 describe git as baked in — the
       "(not yet added)" qualifier is gone; the "image provides" list names git.
-- [ ] `CHANGELOG.md` `[Unreleased] > Added` names git in user-facing terms (no
+- [x] `CHANGELOG.md` `[Unreleased] > Added` names git in user-facing terms (no
       milestone numbers).
-- [ ] Verify slot clean (`cairn/PROFILE.md`): `hadolint Dockerfile` reports no
+- [x] Verify slot clean (`cairn/PROFILE.md`): `hadolint Dockerfile` reports no
       violations and `docker build` succeeds (also exercised by `smoke.sh`).
 
 ## Coverage
@@ -90,3 +90,16 @@ changelog to reflect git as baked in; record the dependency addition (D-003).
 <!-- owner: review · exclusive; evidence per criterion, consistency-gate
      results, review findings + triage. EXEMPT from the 150-line cap (M55):
      only the plan-owned body above counts; evidence never scrambles it. -->
+
+### Acceptance evidence (2026-11-05, branch head facbcb6)
+
+- AC1: fresh `test/smoke.sh` run: "PASS: git runs as rocker over SSH (git version 2.43.0)" (Test 6, via `ssh_run` as rocker@127.0.0.1, asserts exit 0 + `^git version N.N`); summary 12 passed, 0 failed. Discrimination shown at implement (git removed → exit 127, FAIL).
+- AC2: `grep -c 'not yet added' cairn/DESIGN.md` → 0; DESIGN.md:75-76 extras-bar convention reads "git clears the bar and is baked in"; DESIGN.md:107-108 GP2 reads "(git clears the bar and is baked in; quarto waits)"; DESIGN.md:26 "image provides" list has a `git` entry.
+- AC3: CHANGELOG.md:17-19 sits under `## [Unreleased]` > `### Added` and reads "`git` is now installed in the image, so it works in a Positron SSH session without installing it first…"; `grep -nE 'M0[0-9]|milestone' CHANGELOG.md` → no hits.
+- AC4: `docker run --rm -i hadolint/hadolint:v2.15.1 < Dockerfile` → exit 0, no output; `docker build` succeeded inside the fresh smoke run ("PASS: image builds").
+
+### Consistency gate (2026-11-05)
+
+- `cairn_validate.py`: exit 0, all checks passed; 1 advisory WARN (pre-existing `.gitignore` entry `cairn/references/pdf/` superseded), not a gate failure.
+- `cairn_impact.py --changed`: lists GP7 refs (DESIGN.md:77 new text, DESIGN.md:121 the principle, DECISIONS.md:35/46, this file); all agree that per-user git config stays a runtime concern. GP2 refs (DECISIONS.md:40-48, DESIGN.md:106) agree with the new text. Reconciled, no divergence.
+- Toolchain slot: hadolint clean and build OK (AC4); base pinned `FROM rocker/r2u:24.04` (explicit tag); diff adds no ENV/COPY/ARG lines (no secrets); `.dockerignore` present, excludes `.git`, `cairn/`, `test/`; CHANGELOG has the entry (AC3).
