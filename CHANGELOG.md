@@ -18,8 +18,8 @@ pre-1.0 its runtime interface may change between releases.
   SSH (the connection Positron uses) without installing it first. No git
   identity is preset: set your own `user.name` and `user.email` with
   `git config --global` before you commit.
-- `less` is now installed, and git's default pager is now `less` instead of
-  `more`. The image presets no pager settings.
+- `less` is now installed, so git output now pages through `less` (git's
+  default pager) instead of `more`. The image presets no pager settings.
 
 ### Changed
 
