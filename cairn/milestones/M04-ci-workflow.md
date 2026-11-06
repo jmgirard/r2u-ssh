@@ -90,3 +90,21 @@ Evidence (2026-11-05, branch head 8c2a83a, synced with origin/main 7768521):
 - AC5: hadolint on Dockerfile exit 0; on the planted copy (`RUN cd /tmp`) exit 1 with DL3003. shellcheck on both scripts exit 0; on the planted boot-sshd.sh copy (`ls $HOME_DIR`) exit 1 with SC2086. Only the input path changed. Local `test/smoke.sh`: 12 passed, 0 failed.
 - AC6: DESIGN.md Known issues "Platform-biased testing" now says CI lints, builds, and runs `test/smoke.sh` on amd64 for every pull request into main and every push to main that changes files outside `cairn/`, and that arm64 and the Windows PowerShell path stay manual.
 - Gate: `cairn_validate` all checks passed (1 advisory: `.gitignore` pdf entry, pre-existing). No principle changed, so `cairn_impact` skipped. Profile gate: `docker build` succeeded (inside smoke); hadolint clean; base pinned to the explicit `rocker/r2u:24.04` tag; no secrets in ENV/COPY (grep hits are comments only); `.dockerignore` present and now also excludes `.github`; no CHANGELOG entry owed, since users of the image see no change.
+
+Findings (spawned: diff-bug, blame-history, prior-review, ripple):
+
+- blame-history #1: smoke's bspm install and the build's apt fetches use the r2u mirror, which branch `diag/mirror-arch-probe` (2026-07-23, r2u discussion #159) recorded as unreachable for about half of GitHub-hosted runner jobs, so CI can go red for reasons unrelated to the image — fix now (DESIGN names the dependency) plus follow-up: candidate row "Keep upstream flakes from failing CI" (normal: a red run blocks the merge step).
+- blame-history #2: DESIGN's new amd64-coverage text omits that dependency — fix now.
+- blame-history #3: no record for adding GitHub Actions after M02's "No GitHub Actions" push stance — fix now (milestone Decisions entry).
+- diff-bug #1: no `timeout-minutes`, so a hung network step holds the job for 360 minutes — fix now.
+- diff-bug #2: anonymous Docker Hub pulls of three images can hit rate limits — follow-up: absorbed into "Keep upstream flakes from failing CI".
+- diff-bug #3: smoke's `free_port` releases the port before `docker run -p` takes it — follow-up: absorbed into "Keep upstream flakes from failing CI" (pre-existing smoke code, unmodified line).
+- diff-bug #4: `actions/checkout` keeps the token in `.git/config` — fix now (`persist-credentials: false`).
+- diff-bug #5: no `concurrency` group, so superseded PR runs keep going — fix now (cancel in progress for pull requests only).
+- diff-bug #6: a merge triggers a second run on the push to main — reject, planned change (AC1 names the push trigger, which tests main itself).
+- diff-bug #7: hadolint's default threshold lets style-level findings pass — reject, planned change (CI runs the profile's local verify command as LESSONS spells it, same threshold).
+- diff-bug #8: smoke discards `docker build` stdout — reject, false (BuildKit writes progress and errors to stderr, so they reach the CI log; unmodified line).
+- diff-bug #9: DESIGN does not mention `workflow_dispatch` — reject, style (AC6 does not call for it; the trigger is in the file).
+- prior-review: no prior-review evidence on the touched files (archives hold no CI finding; PR comment probe empty).
+- ripple #1: PROFILE test-doctrine says CI runs `docker build` + `hadolint` on push/PR — reject, false (the slot states the floor a CI workflow must meet, and this workflow meets it).
+- ripple #2: the ROADMAP CI candidate row describes narrower scope — reject, planned change (the row graduates at post-merge hygiene).
