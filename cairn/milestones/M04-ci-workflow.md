@@ -79,6 +79,8 @@ optional; not requested).
 
 ## Decisions
 
+- 2026-11-05: GitHub Actions now runs a test-only workflow. It builds and tests the image and pushes nothing, so the release push stays the manual handoff that D-001 and M02's "No GitHub Actions" stance describe; that stance was about publishing, not testing. The user chose this CI at the plan question set.
+
 ## Review
 
 Evidence (2026-11-05, branch head 8c2a83a, synced with origin/main 7768521):
