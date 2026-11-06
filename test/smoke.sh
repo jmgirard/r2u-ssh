@@ -41,8 +41,9 @@ bad()  { printf 'FAIL: %s\n' "$1"; FAIL=$((FAIL + 1)); }
 # picks a free port at bind time; read it back here.
 host_port() {  # host_port <container-id>
   local mapping
-  # A container that already exited has no mapping; print an empty port so the
-  # SSH checks report FAIL instead of `set -e` ending the script here.
+  # A container that already exited has no mapping; print an empty port so a
+  # check that SSHes to it reports FAIL instead of `set -e` ending the script
+  # here. A later `docker exec` on that container still ends the script.
   mapping="$(docker port "$1" 22/tcp 2>/dev/null || true)"
   mapping="${mapping%%$'\n'*}"   # first mapping only
   printf '%s\n' "${mapping##*:}"
