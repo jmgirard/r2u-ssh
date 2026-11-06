@@ -95,14 +95,15 @@ Evidence (2026-11-05, branch head 8c2a83a, synced with origin/main 7768521):
 
 Findings (spawned: diff-bug, blame-history, prior-review, ripple):
 
-- blame-history #1: smoke's bspm install and the build's apt fetches use the r2u mirror, which branch `diag/mirror-arch-probe` (2026-07-23, r2u discussion #159) recorded as unreachable for about half of GitHub-hosted runner jobs, so CI can go red for reasons unrelated to the image — fix now (DESIGN names the dependency) plus follow-up: candidate row "Keep upstream flakes from failing CI" (normal: a red run blocks the merge step).
-- blame-history #2: DESIGN's new amd64-coverage text omits that dependency — fix now.
-- blame-history #3: no record for adding GitHub Actions after M02's "No GitHub Actions" push stance — fix now (milestone Decisions entry).
-- diff-bug #1: no `timeout-minutes`, so a hung network step holds the job for 360 minutes — fix now.
+- blame-history #1: smoke's bspm install and the build's apt fetches use the r2u mirror, which branch `diag/mirror-arch-probe` (2026-07-23, r2u discussion #159) recorded as unreachable for about half of GitHub-hosted runner jobs, so CI can go red for reasons unrelated to the image — fix now (DESIGN names the dependency), fixed 096dfe5, plus follow-up: candidate row "Keep upstream flakes from failing CI" (normal: a red run blocks the merge step).
+- blame-history #2: DESIGN's new amd64-coverage text omits that dependency — fix now, fixed 096dfe5.
+- blame-history #3: no record for adding GitHub Actions after M02's "No GitHub Actions" push stance — fix now (milestone Decisions entry), fixed 096dfe5.
+- diff-bug #1: no `timeout-minutes`, so a hung network step holds the job for 360 minutes — fix now (`timeout-minutes: 45`), fixed 096dfe5.
 - diff-bug #2: anonymous Docker Hub pulls of three images can hit rate limits — follow-up: absorbed into "Keep upstream flakes from failing CI".
 - diff-bug #3: smoke's `free_port` releases the port before `docker run -p` takes it — follow-up: absorbed into "Keep upstream flakes from failing CI" (pre-existing smoke code, unmodified line).
-- diff-bug #4: `actions/checkout` keeps the token in `.git/config` — fix now (`persist-credentials: false`).
-- diff-bug #5: no `concurrency` group, so superseded PR runs keep going — fix now (cancel in progress for pull requests only).
+- diff-bug #4: `actions/checkout` keeps the token in `.git/config` — fix now (`persist-credentials: false`), fixed 096dfe5.
+- diff-bug #5: no `concurrency` group, so superseded PR runs keep going — fix now (cancel in progress for pull requests only), fixed 096dfe5.
+- after the fixes: actionlint exit 0 and the AC4 grep exit 1 (no match) on the edited ci.yml; the AC1 triggers and AC2 step order are unchanged; `cairn_validate` all checks passed; open-PR read lists 0 open PRs (feature cap 1).
 - diff-bug #6: a merge triggers a second run on the push to main — reject, planned change (AC1 names the push trigger, which tests main itself).
 - diff-bug #7: hadolint's default threshold lets style-level findings pass — reject, planned change (CI runs the profile's local verify command as LESSONS spells it, same threshold).
 - diff-bug #8: smoke discards `docker build` stdout — reject, false (BuildKit writes progress and errors to stderr, so they reach the CI log; unmodified line).
