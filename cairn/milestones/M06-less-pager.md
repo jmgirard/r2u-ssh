@@ -1,6 +1,6 @@
 # M06: Add less as git's pager
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** low
 - **Depends on:** —
 - **Driving RR:** —
@@ -59,6 +59,8 @@ git's other recommended packages (not requested; `--no-install-recommends` stays
 - 2026-11-05: T2 done: smoke Test 7 added inside the keyed-SSH block (output captured, CR/LF stripped, matched `*/less`); SC2016 disabled on that line because the remote shell expands it; shellcheck v0.11.0 clean; branch run 13 passed 0 failed with `/usr/bin/less`; branch script in a detached origin/main worktree (f458040) gave 12 passed 1 failed, Test 7 reporting `/usr/bin/more`.
 - 2026-11-05: T3 done: CHANGELOG Unreleased > Added entry (claim backed by smoke Test 7); DESIGN git bullet and stage 3 name `less`; hadolint clean, build OK.
 - 2026-11-05: the simple-english lint hook flagged 6 hits in older CHANGELOG lines (5, 12, 28, 29, 31, 38), none in the new entry; left as they are, outside M06 scope.
+- 2026-11-05: claim audit: 8 claims read, 0 corrected — CHANGELOG.md, Dockerfile, test/smoke.sh
+- 2026-11-05: all tasks done; status set to review.
 
 ## Decisions
 
