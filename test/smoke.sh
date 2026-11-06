@@ -10,6 +10,7 @@
 #      authorized_keys with no CR and exactly one trailing newline.
 #   5. OCI labels (M02): honest 0.1.0 version (GP3) and base-image provenance
 #      name are present on the built image.
+#   6. git (GP2 day-one-universal extra) runs for rocker over SSH.
 #
 # Usage: test/smoke.sh [image-tag]   (default tag: r2u-ssh:smoke — built here)
 set -euo pipefail
@@ -113,6 +114,16 @@ if wait_for_ssh "$PORT"; then
     ok "bspm installs a binary R package (uuid)"
   else
     bad "bspm install of uuid failed; tail: $(tail -c 120 <<<"$BSPM_OUT")"
+  fi
+  # Test 6: git on rocker's PATH over SSH (exit code and version string).
+  set +e
+  GIT_OUT="$(ssh_run "$PORT" 'git --version' 2>&1)"
+  GIT_CODE=$?
+  set -e
+  if [[ $GIT_CODE -eq 0 && "$GIT_OUT" =~ ^git\ version\ [0-9]+\.[0-9]+ ]]; then
+    ok "git runs as rocker over SSH ($(tr -d '\r\n' <<<"$GIT_OUT"))"
+  else
+    bad "git --version over SSH exited $GIT_CODE; got: $GIT_OUT"
   fi
 else
   bad "sshd never accepted a connection"

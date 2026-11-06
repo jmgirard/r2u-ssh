@@ -59,7 +59,7 @@ changelog to reflect git as baked in; record the dependency addition (D-003).
 - [x] T1: Add `git` to the section-3 apt-get install in `Dockerfile` (fold into
       the existing `openssh-server curl wget …` layer, keep
       `--no-install-recommends`, no new RUN layer, hadolint stays clean).
-- [ ] T2: Add a `git --version` assertion to `test/smoke.sh`, run via the
+- [x] T2: Add a `git --version` assertion to `test/smoke.sh`, run via the
       existing `ssh_run` helper inside the keyed-container block; assert exit 0
       and a version string.
 - [ ] T3: Update `DESIGN.md` (extras-bar convention + GP2 example text; add git
@@ -73,6 +73,7 @@ changelog to reflect git as baked in; record the dependency addition (D-003).
 - 2026-11-05: implement started; branch m003-git-layer cut from main at 13502e9; unrelated .DS_Store change left unstaged.
 - 2026-11-05: verify slot runs hadolint as `docker run --rm -i hadolint/hadolint:v2.15.1 < Dockerfile` (local image; no host binary).
 - 2026-11-05: T1 done — `git` added to the section-3 apt layer; hadolint clean, build OK, image reports git 2.43.0 (base rocker/r2u:24.04 has no git).
+- 2026-11-05: T2 done — smoke Test 6 asserts `git --version` over SSH as rocker (exit 0 + `^git version N.N`); with git removed from the Dockerfile it fails (exit 127, command not found), restored it passes; smoke 12/12; shellcheck v0.11.0 clean.
 
 ## Decisions
 <!-- owner: implement / review · append-only; milestone-local; promote
