@@ -1,13 +1,13 @@
 # M09: Generate SSH host keys at boot
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** IP2, IP3, GP5, GP6, GP7
 - **Resolves:** —
 - **Surface tier:** user-facing — the image, compose file, and README are what users build, run, and follow
-- **Branch/PR:** —
+- **Branch/PR:** m09-host-keys-at-boot
 
 ## Goal
 
@@ -78,7 +78,7 @@ smoke SSH ignore the user's config").
 
 ## Tasks
 
-- [ ] T1: In the `Dockerfile` stage 3 `RUN` (lines 43-49), delete
+- [x] T1: In the `Dockerfile` stage 3 `RUN` (lines 43-49), delete
       `/etc/ssh/ssh_host_*` after the install, in that same `RUN`, so no layer
       keeps them, and create an empty `/etc/ssh/host_keys` owned by root with
       mode 700. In stage 4, add `HostKey` lines for the ed25519, ecdsa, and
@@ -129,6 +129,9 @@ smoke SSH ignore the user's config").
 - 2026-11-06: criteria audit (full mode, fresh Opus reader) returned 17 findings, all fixed: AC1 narrowed to file names, layer count tied to the manifest, failed listings and whiteouts handled; AC2 and AC3 compare key blobs without host and port, AC2 covers all three types and the folder's mode, AC3 compares against the first `up`; AC4 defines the banned syntax, names both volume spellings, adds the `SSHPORT` sentence; AC5 reworded to match the volume and limited to users who connected before; "a smoke check shows this" moved from the criteria to T4; planted defects added to T4 (later `RUN rm`, ed25519-only boot, compose copy without the volume) plus both `docker save` formats.
 - 2026-11-06: IP3 note from the audit: users who connected before must run `ssh-keygen -R` once after updating before Positron connects; this adds no configuration (GP7) and is documented by AC4 and AC5.
 - 2026-11-06: lessons used: 2026-11-06 (M08) compose smoke recipe; 2026-11-05 (M06) red on an `origin/main` worktree; 2026-11-05 (M07) `docker port` after exit; 2026-11-05 (M03) hadolint and shellcheck from Docker; 2026-07-17 (M01) capture output before grep.
+
+- 2026-11-06: started; branch m09-host-keys-at-boot cut from origin/main at 418dc83.
+- 2026-11-06: T1 done: install `RUN` deletes `/etc/ssh/ssh_host_*` and makes `/etc/ssh/host_keys` (root, 700); three `HostKey` lines in `zz-container.conf`; hadolint clean, build OK, `ls /etc/ssh` in the image shows no host key file.
 
 ## Decisions
 

@@ -41,12 +41,17 @@ RUN groupadd -g 1002 rocker \
 # 3. Install OpenSSH server, Positron download tools, git, and less
 # ------------------------------------------------------------
 
+# The openssh-server install writes host keys into /etc/ssh. Delete them in
+# this same RUN, so no image layer holds a private host key (IP2); boot-sshd.sh
+# creates each container's own keys in /etc/ssh/host_keys at start.
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         openssh-server curl wget ca-certificates tar gzip xz-utils git less \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
+    && rm -f /etc/ssh/ssh_host_* \
+    && install -d -m 700 -o root -g root /etc/ssh/host_keys \
     && mkdir -p /var/run/sshd
 
 # ------------------------------------------------------------
@@ -64,6 +69,9 @@ RUN printf "%s\n" \
     "UsePAM yes" \
     "AllowUsers rocker" \
     "AuthorizedKeysFile .ssh/authorized_keys" \
+    "HostKey /etc/ssh/host_keys/ssh_host_ed25519_key" \
+    "HostKey /etc/ssh/host_keys/ssh_host_ecdsa_key" \
+    "HostKey /etc/ssh/host_keys/ssh_host_rsa_key" \
     > /etc/ssh/sshd_config.d/zz-container.conf
 
 # ------------------------------------------------------------
