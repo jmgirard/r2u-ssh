@@ -47,7 +47,7 @@ Extend `test/smoke.sh` to cover the mounted-key boot path, publishing every test
 - [x] T1: Replace `free_port` with `-p 127.0.0.1::22` on each `docker run` and a helper that reads the host port from `docker port <cid> 22/tcp`; delete `free_port`; run `test/smoke.sh` and confirm every existing check still passes.
 - [x] T2: Add the mount-only check: write key A's public half to `$WORK/keys/authorized_keys`, run with `-v "$WORK/keys:/keys:ro"` and no env var, and branch PASS/FAIL on the `ssh` exit status (capture output to a variable before grepping, per the M01 lesson).
 - [x] T3: Add the precedence check: generate key B, mount key A and pass key B as `AUTHORIZED_KEYS_B64`; PASS only when key A connects and a `BatchMode=yes` session with key B exits non-zero printing `Permission denied`.
-- [ ] T4: Show each new check can fail (AC3), per the M06 lesson: `git worktree add --detach <dir> origin/main`, copy the branch's `test/smoke.sh` in, plant each `boot-sshd.sh` defect in turn, run with another image tag, log the FAIL lines in one work-log line, then remove the worktree.
+- [x] T4: Show each new check can fail (AC3), per the M06 lesson: `git worktree add --detach <dir> origin/main`, copy the branch's `test/smoke.sh` in, plant each `boot-sshd.sh` defect in turn, run with another image tag, log the FAIL lines in one work-log line, then remove the worktree.
 - [ ] T5: Update the header comment's test list; run shellcheck from Docker (M03 lesson) and the full `test/smoke.sh`; log the result.
 
 ## Work log
@@ -65,6 +65,7 @@ Extend `test/smoke.sh` to cover the mounted-key boot path, publishing every test
 - 2026-11-05: T1 done: `free_port` replaced by `-p 127.0.0.1::22` and a `host_port` helper reading the first `docker port <cid> 22/tcp` mapping; local `test/smoke.sh` 13 passed, 0 failed.
 - 2026-11-05: implementation choice: new `ssh_as <key> <port> <cmd>` helper carries `BatchMode=yes` for every session, `ssh_run` wraps it with the main key; `host_port` prints an empty port for an exited container so a fail-closed boot reports FAIL instead of ending the script under `set -e`.
 - 2026-11-05: T2 and T3 done in one commit: mount-only check (Test 8) and mount-wins check (Test 9, key B refused with `Permission denied`); local `test/smoke.sh` 15 passed, 0 failed.
+- 2026-11-05: T4 done: detached worktrees of origin/main with the branch's smoke.sh. Mount branch deleted → "FAIL: mounted key (no AUTHORIZED_KEYS_B64) did not let SSH connect" (13 passed, 2 failed, precedence also red); env var tested first → mount-only PASS, "FAIL: mounted key A did not connect when AUTHORIZED_KEYS_B64 was also set" (14 passed, 1 failed). Worktrees and images removed.
 
 ## Decisions
 
