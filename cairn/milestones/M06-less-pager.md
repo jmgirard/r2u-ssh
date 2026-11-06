@@ -61,6 +61,7 @@ git's other recommended packages (not requested; `--no-install-recommends` stays
 - 2026-11-05: the simple-english lint hook flagged 6 hits in older CHANGELOG lines (5, 12, 28, 29, 31, 38), none in the new entry; left as they are, outside M06 scope.
 - 2026-11-05: claim audit: 8 claims read, 0 corrected — CHANGELOG.md, Dockerfile, test/smoke.sh
 - 2026-11-05: all tasks done; status set to review.
+- 2026-11-05: step-7 approval: m006-less-pager approved for merge
 
 ## Decisions
 
