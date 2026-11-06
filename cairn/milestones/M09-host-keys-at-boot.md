@@ -89,7 +89,7 @@ smoke SSH ignore the user's config").
       present key as it is. A failed `ssh-keygen` ends the boot with its error
       and a non-zero exit under `set -e` (GP5). Check `sshd -t` passes in the
       container. shellcheck clean.
-- [ ] T3: In `docker-compose.yml`, add a named volume `ssh-host-keys` mounted
+- [x] T3: In `docker-compose.yml`, add a named volume `ssh-host-keys` mounted
       at `/etc/ssh/host_keys`, beside `home`. Check with
       `docker compose -f docker-compose.yml --env-file /dev/null config`.
 - [ ] T4: Add `test/smoke.sh` checks for AC1, AC2, and AC3, each failing on a
@@ -133,6 +133,7 @@ smoke SSH ignore the user's config").
 - 2026-11-06: started; branch m09-host-keys-at-boot cut from origin/main at 418dc83.
 - 2026-11-06: T1 done: install `RUN` deletes `/etc/ssh/ssh_host_*` and makes `/etc/ssh/host_keys` (root, 700); three `HostKey` lines in `zz-container.conf`; hadolint clean, build OK, `ls /etc/ssh` in the image shows no host key file.
 - 2026-11-06: T2 done: `boot-sshd.sh` sets `/etc/ssh/host_keys` to root 700 and creates each missing or empty key (removing an empty file first, since `ssh-keygen -f` on an existing file asks to overwrite); shellcheck clean; in a container `sshd -t` passes, the folder is root 700, ssh-keyscan shows rsa, ecdsa, and ed25519, and `docker restart` keeps the ed25519 key; note for T4: ssh-keyscan prints its `#` banner lines on stdout, so filter them.
+- 2026-11-06: T3 done: `ssh-host-keys` named volume at `/etc/ssh/host_keys` beside `home`; `docker compose config` lists both volumes, the new one as `r2u-ssh_ssh-host-keys`.
 
 ## Decisions
 
