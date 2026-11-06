@@ -1,13 +1,13 @@
 # M06: Add less as git's pager
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** low
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** GP2
 - **Resolves:** —
 - **Surface tier:** user-facing — changes what a user gets in an SSH session
-- **Branch/PR:** —
+- **Branch/PR:** m006-less-pager
 
 ## Goal
 
@@ -37,7 +37,7 @@ git's other recommended packages (not requested; `--no-install-recommends` stays
 
 ## Tasks
 
-- [ ] T1: Add `less` to the section-3 apt line in `Dockerfile` and to its section comment; run
+- [x] T1: Add `less` to the section-3 apt line in `Dockerfile` and to its section comment; run
       hadolint and `docker build`.
 - [ ] T2: Add smoke Test 7 (capture output to a variable before matching), update the header
       list, run it on the branch, then copy the branch's `test/smoke.sh` into a worktree of the
@@ -54,6 +54,8 @@ git's other recommended packages (not requested; `--no-install-recommends` stays
 - 2026-11-05: collision: candidate row "[low] Add less so git gets a full pager" absorbed; D-003 said a new baked-in tool reopens the bar, answered by D-004.
 - 2026-11-05: plan fact: in today's image `git var GIT_PAGER` prints `pager` and `/usr/bin/pager` resolves to `/usr/bin/more`.
 - 2026-11-05: criteria audit (full mode): 3 findings, all fixed — AC1 runs the branch's smoke script from a default-branch worktree, since smoke.sh always rebuilds its own tree; Goal narrowed to "default pager resolves to less" (the check covers the alternatives path, not `PAGER` or `core.pager`); AC4 adds Function Families stage 3 and the Dockerfile comment. No IP conflict.
+- 2026-11-05: implement started on branch m006-less-pager, cut from origin/main at f458040.
+- 2026-11-05: T1 done: `less` added after `git` on the section-3 apt line and named in its comment; hadolint (Docker image) clean, `docker build` exit 0.
 
 ## Decisions
 
