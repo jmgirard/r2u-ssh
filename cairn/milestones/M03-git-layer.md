@@ -79,6 +79,7 @@ changelog to reflect git as baked in; record the dependency addition (D-003).
 - 2026-11-05: claim audit run although the file has no `Surface tier:` slot, because the diff adds user-facing README/CHANGELOG text.
 - 2026-11-05: claim audit: 9 claims read, 0 corrected — CHANGELOG.md, README.md, test/smoke.sh
 - 2026-11-05: all tasks done; verify clean (hadolint v2.15.1, docker build, smoke 12/12); status → review.
+- 2026-11-05: step-7 approval: m003-git-layer approved for merge
 
 ## Decisions
 <!-- owner: implement / review · append-only; milestone-local; promote
