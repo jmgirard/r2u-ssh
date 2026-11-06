@@ -40,7 +40,7 @@ RUN useradd -m -s /bin/bash rocker \
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        openssh-server curl wget ca-certificates tar gzip xz-utils \
+        openssh-server curl wget ca-certificates tar gzip xz-utils git \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /var/run/sshd

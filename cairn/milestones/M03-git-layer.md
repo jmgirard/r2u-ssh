@@ -3,11 +3,11 @@
      Per-section owners are tagged below. -->
 # M03: Bake in git
 
-- **Status:** planned   <!-- owner: transitioning skill · mirror-update; cairn/ROADMAP.md is the authority -->
+- **Status:** in-progress   <!-- owner: transitioning skill · mirror-update; cairn/ROADMAP.md is the authority -->
 - **Priority:** normal   <!-- owner: plan · create/amend-via-gate; high | normal | low -->
 - **Depends on:** —   <!-- owner: plan · create/amend-via-gate; M<xx>, M<yy> or — -->
 - **Principles touched:** GP2   <!-- owner: plan · create/amend-via-gate; comma-separated IPn/GPn ids this milestone touches, or — -->
-- **Branch/PR:** —   <!-- owner: implement (branch) / review (PR URL) · create -->
+- **Branch/PR:** m003-git-layer   <!-- owner: implement (branch) / review (PR URL) · create -->
 
 ## Goal
 <!-- owner: plan · create; a wrong goal returns to plan, never edited in place -->
@@ -56,7 +56,7 @@ changelog to reflect git as baked in; record the dependency addition (D-003).
 <!-- owner: plan (create) / implement (check-off, minor edits); substantive
      change is amend-via-gate -->
 
-- [ ] T1: Add `git` to the section-3 apt-get install in `Dockerfile` (fold into
+- [x] T1: Add `git` to the section-3 apt-get install in `Dockerfile` (fold into
       the existing `openssh-server curl wget …` layer, keep
       `--no-install-recommends`, no new RUN layer, hadolint stays clean).
 - [ ] T2: Add a `git --version` assertion to `test/smoke.sh`, run via the
@@ -70,6 +70,9 @@ changelog to reflect git as baked in; record the dependency addition (D-003).
 <!-- owner: any skill · append-only; one line per entry; absolute dates -->
 
 - 2026-07-17: created by /milestone-plan.
+- 2026-11-05: implement started; branch m003-git-layer cut from main at 13502e9; unrelated .DS_Store change left unstaged.
+- 2026-11-05: verify slot runs hadolint as `docker run --rm -i hadolint/hadolint:v2.15.1 < Dockerfile` (local image; no host binary).
+- 2026-11-05: T1 done — `git` added to the section-3 apt layer; hadolint clean, build OK, image reports git 2.43.0 (base rocker/r2u:24.04 has no git).
 
 ## Decisions
 <!-- owner: implement / review · append-only; milestone-local; promote
