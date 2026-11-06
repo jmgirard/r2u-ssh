@@ -83,3 +83,20 @@ Evidence gathered 2026-11-05 at branch head 384a712.
 - AC4: `grep -n 'free_port' test/smoke.sh` exit 1, no output; `grep -n 'docker run'` lists 5 lines, none ending in `\`; the `-p` arguments on them are 4 × `-p 127.0.0.1::22` and nothing else (line 75 publishes no port).
 - AC5: `test/smoke.sh` exit 0, "== summary: 15 passed, 0 failed ==", 0 FAIL lines; shellcheck v0.11.0 on `test/smoke.sh` and `boot-sshd.sh` exit 0 with no output.
 - Gate: `cairn_validate` all checks passed (1 advisory: stale `cairn/references/pdf/` ignore entry, already a candidate row); no principle text changed, so `cairn_impact` skipped. Profile gate: `docker build` succeeded in the smoke run, hadolint v2.15.1 exit 0, base pinned to `rocker/r2u:24.04`, no secrets in `ENV`/`ARG`/`COPY` (only public `BASE_DIGEST`), `.dockerignore` present with `.git`; no changelog entry owed (diff is `test/smoke.sh` plus `cairn/`).
+- spawned: diff-bug, blame-history, prior-review, ripple
+- diff-bug #1: new checks not yet run on Linux CI — reject (false): step 8 waits on the PR's amd64 CI before any merge, so the merge cannot happen on a Mac-only green.
+- diff-bug #2: bind mount from `$WORK` (system temp dir) gives a misleading FAIL on hosts that do not share it with Docker (Colima defaults, narrowed Docker Desktop sharing, SELinux without `:z`, userns-remap) — reject (edge): only those hosts reach it, outside the documented Docker Desktop and GitHub-runner use; the effect is a FAIL line, never a false PASS.
+- diff-bug #3: Test 8 repeats Test 9's mount-branch path — reject (false): Test 8 is the only check with no env var set, so it alone catches a mount read only when `AUTHORIZED_KEYS_B64` is also set; Test 8 is also Scope In.
+- diff-bug #4: `wait_for_ssh || true` then `if ssh_run` makes one extra SSH connection — reject (planned change): the explicit `ssh` keeps the `if` directly on ssh's exit status as AC1 and AC2 state.
+- diff-bug #5: key-B half relies on sshd's refusal, not the installed file — reject (planned change): AC2 calls for the SSH form; Ubuntu 24.04 ships OpenSSH 9.6, and one failed auth triggers no penalty.
+- diff-bug #6: `host_port` comment implies the harness survives an exited container, but Test 4's `docker exec` still ends the script — fix now.
+- diff-bug #7: a failed `docker run -d` ends the script with no FAIL line — reject (edge): only a Docker daemon error or an unusable mount path reaches it; the effect is an error exit, and the existing `docker run` lines behave the same.
+- diff-bug #8: ssh sessions still read the host's `~/.ssh/config` (`-F /dev/null` would isolate them) — follow-up: parked row "Make smoke SSH ignore the user's config", promote when a user reports it; pre-existing since `ssh_run` was added, and no false PASS is possible.
+- diff-bug #9: `BatchMode=yes` now applies to every session — reject (false): keys have no passphrase and password and keyboard-interactive auth are off, so no check changes meaning.
+- diff-bug #10: `host_port` correct in every constructed case — noted, no defect.
+- ripple #1: ROADMAP row "Keep upstream flakes from failing CI" still names the `free_port` race — reject (planned change): candidate rows graduate at post-merge hygiene, where this row is narrowed.
+- ripple #2: ROADMAP row "Mount-source smoke coverage" still reads as open — reject (planned change): post-merge hygiene removes it.
+- blame-history #1: same row as ripple #1 — reject (planned change), same reason.
+- blame-history #2: `BatchMode=yes` added to the main SSH path — reject (false), as diff-bug #9.
+- blame-history #3: refusal decided by matching `Permission denied` — reject (planned change): AC2 calls for it, and a wording change shows as FAIL, not a silent pass.
+- prior-review #1: shellcheck not yet run on this diff — reject (false): AC5 evidence records shellcheck v0.11.0 exit 0 at 384a712.
