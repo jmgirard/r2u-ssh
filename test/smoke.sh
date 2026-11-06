@@ -38,7 +38,9 @@ bad()  { printf 'FAIL: %s\n' "$1"; FAIL=$((FAIL + 1)); }
 # picks a free port at bind time; read it back here.
 host_port() {  # host_port <container-id>
   local mapping
-  mapping="$(docker port "$1" 22/tcp)"
+  # A container that already exited has no mapping; print an empty port so the
+  # SSH checks report FAIL instead of `set -e` ending the script here.
+  mapping="$(docker port "$1" 22/tcp 2>/dev/null || true)"
   mapping="${mapping%%$'\n'*}"   # first mapping only
   printf '%s\n' "${mapping##*:}"
 }
@@ -86,11 +88,16 @@ ssh-keygen -t ed25519 -N '' -C smoke -f "$WORK/id" >/dev/null
 PUB="$(cat "$WORK/id.pub")"
 B64="$(printf '%s' "$PUB" | base64 | tr -d '\n')"
 
-ssh_run() {  # ssh_run <port> <remote-command>
-  ssh -i "$WORK/id" -p "$1" \
+ssh_as() {  # ssh_as <private-key> <port> <remote-command>
+  ssh -i "$1" -p "$2" \
       -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-      -o IdentitiesOnly=yes -o ConnectTimeout=5 -o LogLevel=ERROR \
-      rocker@127.0.0.1 "$2"
+      -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=5 \
+      -o LogLevel=ERROR \
+      rocker@127.0.0.1 "$3"
+}
+
+ssh_run() {  # ssh_run <port> <remote-command>   (with the main key, "$WORK/id")
+  ssh_as "$WORK/id" "$1" "$2"
 }
 
 wait_for_ssh() {  # wait_for_ssh <port>
@@ -169,6 +176,44 @@ if [[ "$(echo "$TRAILING" | tr -d ' ')" == "1" && "$(echo "$LINES_NONBLANK" | tr
   ok "authorized_keys has exactly one trailing newline (1 line, no blank lines)"
 else
   bad "authorized_keys newline layout off (wc -l=$TRAILING, nonblank=$LINES_NONBLANK)"
+fi
+
+# --- Test 8: mounted key only ----------------------------------------------
+# boot-sshd.sh installs /keys/authorized_keys when it is mounted; no env var.
+echo "== mounted key (/keys/authorized_keys, no env var) =="
+mkdir -p "$WORK/keys"
+printf '%s\n' "$PUB" > "$WORK/keys/authorized_keys"
+CID3="$(docker run -d -p 127.0.0.1::22 -v "$WORK/keys:/keys:ro" "$IMAGE")"
+CONTAINERS+=("$CID3")
+PORT3="$(host_port "$CID3")"
+wait_for_ssh "$PORT3" || true   # give sshd time to start; the check below decides
+if ssh_run "$PORT3" true >/dev/null 2>&1; then
+  ok "mounted key lets SSH connect as rocker"
+else
+  bad "mounted key (no AUTHORIZED_KEYS_B64) did not let SSH connect"
+fi
+
+# --- Test 9: mounted key wins over AUTHORIZED_KEYS_B64 ---------------------
+# Key A (the main key) is mounted; key B arrives in the env var. Only A works.
+echo "== key precedence (mount wins over AUTHORIZED_KEYS_B64) =="
+ssh-keygen -t ed25519 -N '' -C smoke-b -f "$WORK/id_b" >/dev/null
+B64_B="$(printf '%s' "$(cat "$WORK/id_b.pub")" | base64 | tr -d '\n')"
+CID4="$(docker run -d -p 127.0.0.1::22 -v "$WORK/keys:/keys:ro" -e "AUTHORIZED_KEYS_B64=${B64_B}" "$IMAGE")"
+CONTAINERS+=("$CID4")
+PORT4="$(host_port "$CID4")"
+wait_for_ssh "$PORT4" || true   # give sshd time to start; the check below decides
+if ssh_run "$PORT4" true >/dev/null 2>&1; then
+  set +e
+  B_OUT="$(ssh_as "$WORK/id_b" "$PORT4" true 2>&1)"
+  B_CODE=$?
+  set -e
+  if [[ $B_CODE -ne 0 ]] && grep -q 'Permission denied' <<<"$B_OUT"; then
+    ok "mounted key wins: key A connects, env-var key B is refused"
+  else
+    bad "env-var key B was not refused (exit $B_CODE); got: $B_OUT"
+  fi
+else
+  bad "mounted key A did not connect when AUTHORIZED_KEYS_B64 was also set"
 fi
 
 # --- Summary ---------------------------------------------------------------
