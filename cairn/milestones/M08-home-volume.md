@@ -1,6 +1,6 @@
 # M08: Keep user work across compose down
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
@@ -112,6 +112,7 @@ keys (the candidate row "Generate SSH host keys at boot").
 - 2026-11-05: T3 done: README Step 6 says what each down command keeps and that binary packages must be installed again; CHANGELOG Unreleased > Changed has three entries (home survives down, update loses old-container files, positron_cache retired); DESIGN "image provides" and State name the home volume. The simple-english hook still flags older README/CHANGELOG lines this change does not touch; left as they are (out of scope).
 - 2026-11-05: T4 done: hadolint clean, shellcheck clean on both scripts, smoke 20/20, no smoke volumes left, cairn_validate passes (1 standing advisory). The volume observations are the m08obs line above.
 - 2026-11-05: claim audit: 24 claims read, 4 corrected — README.md, CHANGELOG.md, test/smoke.sh (volume names `<folder>_home` and `<folder>_positron_cache` stated as usual, lowercase; SSHPORT=0 port "can change"); the re-read held 3 and asked the README name to carry the same "usually ... lowercase" caveat, which was applied.
+- 2026-11-05: implement complete; status review. Since the last smoke run only a smoke.sh comment and doc text changed (shellcheck re-run clean).
 
 ## Decisions
 
