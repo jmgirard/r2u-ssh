@@ -9,7 +9,7 @@ _Last hygiene check: 2026-11-05 — M03 archived; 2 candidate rows added_
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M04 | CI build workflow | planned | — | normal | milestones/M04-ci-workflow.md |
+| M04 | CI build workflow | in-progress | — | normal | milestones/M04-ci-workflow.md |
 | M05 | Untrack .DS_Store | planned | — | normal | milestones/M05-untrack-ds-store.md |
 | M06 | Add less as git's pager | planned | — | low | milestones/M06-less-pager.md |
 | M03 | Bake in git | done | — | normal | milestones/archive/M03-git-layer.md |

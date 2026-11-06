@@ -1,13 +1,13 @@
 # M04: CI build workflow
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** IP3
 - **Resolves:** —
 - **Surface tier:** internal — CI tooling that only the maintainer's merge process reads
-- **Branch/PR:** —
+- **Branch/PR:** m004-ci-workflow
 
 ## Goal
 
@@ -48,7 +48,7 @@ optional; not requested).
 
 ## Tasks
 
-- [ ] T1: Write `.github/workflows/ci.yml`: the three triggers, one `ubuntu-24.04` job,
+- [x] T1: Write `.github/workflows/ci.yml`: the three triggers, one `ubuntu-24.04` job,
       `actions/checkout` at a pinned major tag, then the hadolint, shellcheck, and smoke steps
       with the commands from LESSONS (hadolint reads `Dockerfile` on stdin; shellcheck mounts
       the repo read-only). No `continue-on-error` and no `||` in any `run:` block.
@@ -69,6 +69,9 @@ optional; not requested).
 - 2026-11-05: inbox sweep: 0 open issues, 0 open PRs.
 - 2026-11-05: plan gate chose running test/smoke.sh in CI over lint and build only because only smoke exercises SSH, bspm, and git on amd64; falsified by smoke runs that fail on GitHub runners for reasons unrelated to the image.
 - 2026-11-05: criteria audit (reduced mode): 5 findings, all fixed — Goal/AC6 now say pushes touching only `cairn/` are skipped; AC4 narrowed to no `continue-on-error` key and no `||` in `run:` blocks; AC5 says only the input path changes; AC2 says steps follow checkout; no criterion claims a green GitHub run before review, because the PR (and its first CI run) opens after merge approval and the merge step refuses red or pending CI.
+
+- 2026-11-05: implement started on m004-ci-workflow; the unrelated local `.DS_Store` change stays unstaged (M05 handles it).
+- 2026-11-05: T1 done: `.github/workflows/ci.yml` with `actions/checkout@v7` (latest release v7.0.1), `permissions: contents: read`, and one job `build-and-smoke`; added `.github` to `.dockerignore` so the new directory stays out of the build context (minor amendment).
 
 ## Decisions
 
