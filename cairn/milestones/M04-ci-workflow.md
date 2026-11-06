@@ -30,12 +30,12 @@ optional; not requested).
 
 ## Acceptance criteria
 
-- [ ] AC1: `.github/workflows/ci.yml` triggers on `push` to `main` with `paths-ignore: ['cairn/**']`, on `pull_request` targeting `main`, and on `workflow_dispatch`, as read from the file.
-- [ ] AC2: The workflow has one job on `ubuntu-24.04`; after checkout, its steps run in this order: hadolint on `Dockerfile` from the `hadolint/hadolint:v2.15.1` image, shellcheck on `boot-sshd.sh` and `test/smoke.sh` from the `koalaman/shellcheck:v0.11.0` image, and `test/smoke.sh`, as read from the file.
-- [ ] AC3: actionlint, run from the `rhysd/actionlint` Docker image at a pinned version, reports no errors on `.github/workflows/ci.yml`.
-- [ ] AC4: The workflow contains no `continue-on-error` key and no `||` operator in any `run:` block, as shown by `grep -nE 'continue-on-error|\|\|' .github/workflows/ci.yml` finding no match.
-- [ ] AC5: Run locally as the workflow spells them, with only the input path changed, the hadolint and shellcheck commands exit 0 on the branch's files and exit non-zero on a temporary copy carrying one planted violation each; `test/smoke.sh` passes locally with 12 of 12 checks.
-- [ ] AC6: The "Platform-biased testing" entry in `cairn/DESIGN.md` Known issues says the amd64 build and smoke test now run in CI on every pull request into main and every push to main that changes files outside `cairn/`, and that arm64 and Windows PowerShell stay manual.
+- [x] AC1: `.github/workflows/ci.yml` triggers on `push` to `main` with `paths-ignore: ['cairn/**']`, on `pull_request` targeting `main`, and on `workflow_dispatch`, as read from the file.
+- [x] AC2: The workflow has one job on `ubuntu-24.04`; after checkout, its steps run in this order: hadolint on `Dockerfile` from the `hadolint/hadolint:v2.15.1` image, shellcheck on `boot-sshd.sh` and `test/smoke.sh` from the `koalaman/shellcheck:v0.11.0` image, and `test/smoke.sh`, as read from the file.
+- [x] AC3: actionlint, run from the `rhysd/actionlint` Docker image at a pinned version, reports no errors on `.github/workflows/ci.yml`.
+- [x] AC4: The workflow contains no `continue-on-error` key and no `||` operator in any `run:` block, as shown by `grep -nE 'continue-on-error|\|\|' .github/workflows/ci.yml` finding no match.
+- [x] AC5: Run locally as the workflow spells them, with only the input path changed, the hadolint and shellcheck commands exit 0 on the branch's files and exit non-zero on a temporary copy carrying one planted violation each; `test/smoke.sh` passes locally with 12 of 12 checks.
+- [x] AC6: The "Platform-biased testing" entry in `cairn/DESIGN.md` Known issues says the amd64 build and smoke test now run in CI on every pull request into main and every push to main that changes files outside `cairn/`, and that arm64 and Windows PowerShell stay manual.
 
 ## Coverage
 
@@ -80,3 +80,13 @@ optional; not requested).
 ## Decisions
 
 ## Review
+
+Evidence (2026-11-05, branch head 8c2a83a, synced with origin/main 7768521):
+
+- AC1: ci.yml lines 3-10: `push` with `branches: [main]` and `paths-ignore: ['cairn/**']`, `pull_request` with `branches: [main]`, `workflow_dispatch`.
+- AC2: one job `build-and-smoke`, `runs-on: ubuntu-24.04`; after `actions/checkout@v7`, steps are hadolint (`hadolint/hadolint:v2.15.1` < Dockerfile), shellcheck (`koalaman/shellcheck:v0.11.0` on /mnt/boot-sshd.sh /mnt/test/smoke.sh), then `test/smoke.sh`, in that order.
+- AC3: `rhysd/actionlint:1.7.12` on ci.yml: exit 0, no output.
+- AC4: `grep -nE 'continue-on-error|\|\|' .github/workflows/ci.yml`: exit 1, no match.
+- AC5: hadolint on Dockerfile exit 0; on the planted copy (`RUN cd /tmp`) exit 1 with DL3003. shellcheck on both scripts exit 0; on the planted boot-sshd.sh copy (`ls $HOME_DIR`) exit 1 with SC2086. Only the input path changed. Local `test/smoke.sh`: 12 passed, 0 failed.
+- AC6: DESIGN.md Known issues "Platform-biased testing" now says CI lints, builds, and runs `test/smoke.sh` on amd64 for every pull request into main and every push to main that changes files outside `cairn/`, and that arm64 and the Windows PowerShell path stay manual.
+- Gate: `cairn_validate` all checks passed (1 advisory: `.gitignore` pdf entry, pre-existing). No principle changed, so `cairn_impact` skipped. Profile gate: `docker build` succeeded (inside smoke); hadolint clean; base pinned to the explicit `rocker/r2u:24.04` tag; no secrets in ENV/COPY (grep hits are comments only); `.dockerignore` present and now also excludes `.github`; no CHANGELOG entry owed, since users of the image see no change.
