@@ -80,7 +80,7 @@ keys (the candidate row "Generate SSH host keys at boot").
       make a second keypair and recreate with `up -d --force-recreate`. Show
       both checks red on a worktree of `origin/main` (M06 lesson). shellcheck
       clean.
-- [ ] T3: README Step 6 (AC4), the CHANGELOG entry (AC5), and DESIGN.md: the
+- [x] T3: README Step 6 (AC4), the CHANGELOG entry (AC5), and DESIGN.md: the
       "image provides" Positron bullet and the Architecture State bullet name
       the home volume, and say that Docker fills a new volume from the image's
       `/home/rocker` once, so later image changes to that folder do not reach
@@ -108,6 +108,8 @@ keys (the candidate row "Generate SSH host keys at boot").
 - 2026-11-05: implement started; branch m08-home-volume cut from main at 03d1325.
 - 2026-11-05: T1 done: compose mounts named volume `home` at /home/rocker; `config` with `--env-file /dev/null` and only AUTHORIZED_KEYS_B64 set lists one volume (type volume, target /home/rocker, project volume r2u-ssh_home) and no positron_cache.
 - 2026-11-05: T2 done: smoke Tests 10-11 run the repo compose file as project `r2u-ssh-smoke-$$` with an image-only override; `wait_for_ssh` takes an optional key; smoke 20/20 on the branch, shellcheck clean. Red shown in a worktree of origin/main: the 3 file checks and the volume check FAIL (main has no home volume); the key check passed there and went red only with a planted boot-sshd.sh that appends keys. No smoke volumes left behind.
+- 2026-11-05: observed with throwaway project m08obs before writing docs: going from main's compose to the branch's recreated the container on a new `m08obs_home` volume and lost a file written in the old one, and left `m08obs_positron_cache`; bspm put uuid in /usr/lib/R/site-library and `library(uuid)` failed after down/up while a home file stayed; `down --rmi all` removed the image and kept both volumes; `down -v` removed them.
+- 2026-11-05: T3 done: README Step 6 says what each down command keeps and that binary packages must be installed again; CHANGELOG Unreleased > Changed has three entries (home survives down, update loses old-container files, positron_cache retired); DESIGN "image provides" and State name the home volume. The simple-english hook still flags older README/CHANGELOG lines this change does not touch; left as they are (out of scope).
 
 ## Decisions
 
