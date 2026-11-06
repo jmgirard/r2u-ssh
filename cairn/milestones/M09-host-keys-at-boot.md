@@ -83,7 +83,7 @@ smoke SSH ignore the user's config").
       keeps them, and create an empty `/etc/ssh/host_keys` owned by root with
       mode 700. In stage 4, add `HostKey` lines for the ed25519, ecdsa, and
       rsa keys in that folder to `zz-container.conf`. hadolint clean; build.
-- [ ] T2: In `boot-sshd.sh`, before `exec sshd`, set `/etc/ssh/host_keys` to
+- [x] T2: In `boot-sshd.sh`, before `exec sshd`, set `/etc/ssh/host_keys` to
       root and mode 700 with `install -d`, then create each of the three host
       keys there that is missing, with `ssh-keygen -q -N ''`, and leave a
       present key as it is. A failed `ssh-keygen` ends the boot with its error
@@ -132,6 +132,7 @@ smoke SSH ignore the user's config").
 
 - 2026-11-06: started; branch m09-host-keys-at-boot cut from origin/main at 418dc83.
 - 2026-11-06: T1 done: install `RUN` deletes `/etc/ssh/ssh_host_*` and makes `/etc/ssh/host_keys` (root, 700); three `HostKey` lines in `zz-container.conf`; hadolint clean, build OK, `ls /etc/ssh` in the image shows no host key file.
+- 2026-11-06: T2 done: `boot-sshd.sh` sets `/etc/ssh/host_keys` to root 700 and creates each missing or empty key (removing an empty file first, since `ssh-keygen -f` on an existing file asks to overwrite); shellcheck clean; in a container `sshd -t` passes, the folder is root 700, ssh-keyscan shows rsa, ecdsa, and ed25519, and `docker restart` keeps the ed25519 key; note for T4: ssh-keyscan prints its `#` banner lines on stdout, so filter them.
 
 ## Decisions
 

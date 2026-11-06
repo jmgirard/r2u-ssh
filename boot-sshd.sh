@@ -44,5 +44,19 @@ chown -R "$USER_NAME:$USER_NAME" "$HOME_DIR/.ssh" "$HOME_DIR/.positron-server"
 chmod 700 "$HOME_DIR/.ssh"
 chmod 600 "$KEYDST"
 
+# Host keys: the image ships none (IP2). Create each missing key at start and
+# keep a present one, so a kept /etc/ssh/host_keys volume keeps the host key
+# that clients already trust. A failed ssh-keygen ends the boot (set -e).
+HOSTKEY_DIR="/etc/ssh/host_keys"
+install -d -m 700 -o root -g root "$HOSTKEY_DIR"
+for type in ed25519 ecdsa rsa; do
+  hostkey="$HOSTKEY_DIR/ssh_host_${type}_key"
+  if [[ ! -s "$hostkey" ]]; then
+    rm -f "$hostkey" "$hostkey.pub"
+    echo "Creating SSH host key ($type)..."
+    ssh-keygen -q -t "$type" -N '' -f "$hostkey"
+  fi
+done
+
 echo "Starting sshd..."
 exec /usr/sbin/sshd -D -e
