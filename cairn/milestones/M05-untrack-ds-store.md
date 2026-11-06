@@ -55,6 +55,8 @@ add a `.DS_Store` line to `.gitignore`, and add a `**/.DS_Store` line to `.docke
 - 2026-11-05: claim audit: not owed — internal tier
 - 2026-11-05: all tasks checked, verify clean (hadolint, `docker build`); status → review.
 - 2026-11-05: review checkpoint — AC1–AC3 evidenced and ticked, consistency gate passed; four review lenses spawned, findings not yet settled.
+- 2026-11-05: findings settled — 12 reported, 10 rejected, 2 follow-up, 0 fix-now; no floor return.
+- 2026-11-05: step-7 approval: m005-untrack-ds-store approved for merge
 
 ## Decisions
 
