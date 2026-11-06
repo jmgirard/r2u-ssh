@@ -28,11 +28,11 @@ Extend `test/smoke.sh` to cover the mounted-key boot path, publishing every test
 
 ## Acceptance criteria
 
-- [ ] AC1: `test/smoke.sh` contains a check that runs a container with a key file bind-mounted at `/keys/authorized_keys` and no `AUTHORIZED_KEYS_B64`, and prints its PASS line only in the success branch of an `if` on the exit status of `ssh` as `rocker` with that key's private half.
-- [ ] AC2: `test/smoke.sh` contains a check that runs a container with key A mounted at `/keys/authorized_keys` and `AUTHORIZED_KEYS_B64` set to key B, and prints its PASS line only inside an `if` that requires an `ssh` session with key A to exit 0 and then an `ssh -o BatchMode=yes` session with key B to exit non-zero with output matching `Permission denied`.
-- [ ] AC3: When `test/smoke.sh` runs against a `boot-sshd.sh` without the `/keys/authorized_keys` branch, the AC1 check prints FAIL; when it runs against a `boot-sshd.sh` that tests `AUTHORIZED_KEYS_B64` before the mount, the AC2 check prints FAIL.
-- [ ] AC4: `grep -n 'free_port' test/smoke.sh` prints nothing; no line that `grep -n 'docker run' test/smoke.sh` prints ends in `\`; and every `-p` argument on those lines is `-p 127.0.0.1::22`.
-- [ ] AC5: `test/smoke.sh` exits 0 on the branch head with no FAIL line, and shellcheck v0.11.0 (`docker run --rm -v "$PWD:/mnt:ro" koalaman/shellcheck:v0.11.0 /mnt/test/smoke.sh /mnt/boot-sshd.sh`) reports nothing.
+- [x] AC1: `test/smoke.sh` contains a check that runs a container with a key file bind-mounted at `/keys/authorized_keys` and no `AUTHORIZED_KEYS_B64`, and prints its PASS line only in the success branch of an `if` on the exit status of `ssh` as `rocker` with that key's private half.
+- [x] AC2: `test/smoke.sh` contains a check that runs a container with key A mounted at `/keys/authorized_keys` and `AUTHORIZED_KEYS_B64` set to key B, and prints its PASS line only inside an `if` that requires an `ssh` session with key A to exit 0 and then an `ssh -o BatchMode=yes` session with key B to exit non-zero with output matching `Permission denied`.
+- [x] AC3: When `test/smoke.sh` runs against a `boot-sshd.sh` without the `/keys/authorized_keys` branch, the AC1 check prints FAIL; when it runs against a `boot-sshd.sh` that tests `AUTHORIZED_KEYS_B64` before the mount, the AC2 check prints FAIL.
+- [x] AC4: `grep -n 'free_port' test/smoke.sh` prints nothing; no line that `grep -n 'docker run' test/smoke.sh` prints ends in `\`; and every `-p` argument on those lines is `-p 127.0.0.1::22`.
+- [x] AC5: `test/smoke.sh` exits 0 on the branch head with no FAIL line, and shellcheck v0.11.0 (`docker run --rm -v "$PWD:/mnt:ro" koalaman/shellcheck:v0.11.0 /mnt/test/smoke.sh /mnt/boot-sshd.sh`) reports nothing.
 
 ## Coverage
 
@@ -69,7 +69,17 @@ Extend `test/smoke.sh` to cover the mounted-key boot path, publishing every test
 - 2026-11-05: T5 done: header lists Tests 8 and 9; shellcheck v0.11.0 exit 0 on smoke.sh and boot-sshd.sh; `test/smoke.sh` 15 passed, 0 failed. Dockerfile and build context unchanged, so no hadolint rerun.
 - 2026-11-05: claim audit: not owed — internal tier.
 - 2026-11-05: all tasks done; status review.
+- 2026-11-05: review: AC4 and AC5 boxes were ticked one edit before their evidence lines landed (the evidence edits missed on a twice-matching anchor); evidence lines added and checked present before any further step.
 
 ## Decisions
 
 ## Review
+
+Evidence gathered 2026-11-05 at branch head 384a712.
+
+- AC1: `test/smoke.sh` Test 8 runs `docker run -d -p 127.0.0.1::22 -v "$WORK/keys:/keys:ro"` with no `-e`, and its `ok` line sits in the then-branch of `if ssh_run "$PORT3" true` (ssh as `rocker@127.0.0.1` with `$WORK/id`); fresh run printed "PASS: mounted key lets SSH connect as rocker".
+- AC2: Test 9 mounts key A and passes key B as `AUTHORIZED_KEYS_B64`; its `ok` line sits inside `if ssh_run "$PORT4" true` (key A, exit 0) and then `if [[ $B_CODE -ne 0 ]] && grep -q 'Permission denied'` on the key-B session from `ssh_as`, which sets `-o BatchMode=yes` (smoke.sh:97); fresh run printed "PASS: mounted key wins: key A connects, env-var key B is refused".
+- AC3: fresh detached worktrees of origin/main with the branch's smoke.sh. Mount branch deleted from `boot-sshd.sh`: "FAIL: mounted key (no AUTHORIZED_KEYS_B64) did not let SSH connect" (13 passed, 2 failed). Env var tested before the mount: "FAIL: mounted key A did not connect when AUTHORIZED_KEYS_B64 was also set", mount-only check still PASS (14 passed, 1 failed). Worktrees and images removed.
+- AC4: `grep -n 'free_port' test/smoke.sh` exit 1, no output; `grep -n 'docker run'` lists 5 lines, none ending in `\`; the `-p` arguments on them are 4 × `-p 127.0.0.1::22` and nothing else (line 75 publishes no port).
+- AC5: `test/smoke.sh` exit 0, "== summary: 15 passed, 0 failed ==", 0 FAIL lines; shellcheck v0.11.0 on `test/smoke.sh` and `boot-sshd.sh` exit 0 with no output.
+- Gate: `cairn_validate` all checks passed (1 advisory: stale `cairn/references/pdf/` ignore entry, already a candidate row); no principle text changed, so `cairn_impact` skipped. Profile gate: `docker build` succeeded in the smoke run, hadolint v2.15.1 exit 0, base pinned to `rocker/r2u:24.04`, no secrets in `ENV`/`ARG`/`COPY` (only public `BASE_DIGEST`), `.dockerignore` present with `.git`; no changelog entry owed (diff is `test/smoke.sh` plus `cairn/`).
