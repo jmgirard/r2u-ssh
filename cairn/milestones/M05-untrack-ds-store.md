@@ -1,13 +1,13 @@
 # M05: Untrack .DS_Store
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** —
 - **Resolves:** —
 - **Surface tier:** internal — repo hygiene; the Dockerfile copies only `boot-sshd.sh`, so the image does not change
-- **Branch/PR:** —
+- **Branch/PR:** m005-untrack-ds-store
 
 ## Goal
 
@@ -34,7 +34,7 @@ add a `.DS_Store` line to `.gitignore`, and add a `**/.DS_Store` line to `.docke
 
 ## Tasks
 
-- [ ] T1: `git rm --cached .DS_Store`; add `.DS_Store` to `.gitignore` and `**/.DS_Store` to
+- [x] T1: `git rm --cached .DS_Store`; add `.DS_Store` to `.gitignore` and `**/.DS_Store` to
       `.dockerignore`.
 - [ ] T2: Run the throwaway context build with planted files, with and without the
       `.dockerignore` line (then delete the planted files), and run hadolint and `docker build`.
@@ -47,6 +47,8 @@ add a `.DS_Store` line to `.gitignore`, and add a `**/.DS_Store` line to `.docke
 - 2026-11-05: lessons used: 2026-11-05 (M03) hadolint from a Docker image.
 - 2026-11-05: collision: candidate row "Untrack the build-context `.DS_Store`" absorbed.
 - 2026-11-05: criteria audit (reduced mode): 1 finding, fixed — AC2 now probes the built context with planted `.DS_Store` files instead of checking only that an ignore line exists.
+- 2026-11-05: implement started on branch m005-untrack-ds-store, cut from origin/main at 006fadb; the working tree's only stray change was the root `.DS_Store` itself, which T1 untracks.
+- 2026-11-05: T1 done — root `.DS_Store` removed from the index (file kept on disk), `.DS_Store` added to `.gitignore`, `**/.DS_Store` appended to `.dockerignore`; `git ls-files` lists 0 `.DS_Store` paths; hadolint clean, `docker build` succeeded.
 
 ## Decisions
 
