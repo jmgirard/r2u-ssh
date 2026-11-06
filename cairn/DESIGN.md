@@ -23,6 +23,8 @@ The image provides:
   base64-encoded `AUTHORIZED_KEYS_B64` env var (or a mounted `/keys/authorized_keys`).
 - A non-root user (`rocker`) with passwordless `sudo`.
 - `bspm` enabled in R using the sudo backend (`options(bspm.sudo = TRUE)`).
+- `git`, baked in as a day-one-universal extra (binary only: no git-lfs
+  and no preset `user.name`/`user.email` or other global config).
 - Positron affordances: the server-download deps (curl/wget/tar/xz),
   `~/.positron-server` prepared at boot, and a `positron_cache` volume.
 - A boot script (`boot-sshd.sh`) that prepares `~/.ssh`/`~/.positron-server`,
@@ -52,7 +54,7 @@ The Dockerfile's numbered stages, each a distinct concern:
 1. **Base + metadata** — `FROM rocker/r2u:24.04`, OCI labels.
 2. **User creation** — non-root `rocker` with `~/.ssh`.
 3. **sshd install & config** — openssh-server plus the Positron server-download
-   deps; key-only auth via `/etc/ssh/sshd_config.d/zz-container.conf`.
+   deps and git; key-only auth via `/etc/ssh/sshd_config.d/zz-container.conf`.
 4. **Boot script** — `/usr/local/bin/boot-sshd.sh` (a `COPY`'d file): resolve
    home, prepare `~/.ssh` and `~/.positron-server`, install the CR-stripped key
    from mount or env var (fail closed if none), fix ownership, exec `sshd -D -e`.
@@ -71,7 +73,8 @@ The Dockerfile's numbered stages, each a distinct concern:
   bit-reproducible. A GHCR release records the base digest it was built from.
 - **Extras bar:** a tool is baked in only if essentially every Positron R user
   needs it in their first session ("day-one universal"). git clears the bar
-  (not yet added); quarto/texlive wait for demonstrated demand. The default
+  and is baked in (binary only; per-user git config stays a runtime concern,
+  GP7); quarto/texlive wait for demonstrated demand. The default
   answer to "please add X" is `bspm::install…`/`apt` at runtime.
 - **Docs:** every README recipe must work copy-paste on macOS *and* Windows
   PowerShell.
@@ -102,7 +105,7 @@ stated justification). Numbers are never reused or renumbered._
   docs warn against exposure rather than the image hardening for it.
 - GP2: **Day-one-universal extras bar.** A tool is baked in only if
   essentially every Positron R user needs it in their first session (git
-  clears the bar; quarto waits). The default answer to "add X" is bspm/apt at
+  clears the bar and is baked in; quarto waits). The default answer to "add X" is bspm/apt at
   runtime.
 - GP3: **Honest versioning.** The version label never promises more stability
   than intended: 0.x while the runtime interface is fluid; 1.0 is the
