@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-07-17_
+_Last hygiene check: 2026-11-05 — M03 archived; 2 candidate rows added_
 
 ## Milestones
 
@@ -9,7 +9,7 @@ _Last hygiene check: 2026-07-17_
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M03 | Bake in git | review | — | normal | milestones/M03-git-layer.md |
+| M03 | Bake in git | done | — | normal | milestones/archive/M03-git-layer.md |
 | M02 | GHCR release pipeline | done | — | normal | milestones/archive/M02-ghcr-release-pipeline.md |
 | M01 | Runtime contract cleanup | done | — | normal | milestones/archive/M01-contract-cleanup.md |
 
