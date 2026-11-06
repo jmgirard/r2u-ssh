@@ -235,7 +235,7 @@ fi
 # user's own r2u-ssh project and its home volume are never touched. The
 # override changes only the image (the tag built above, never pulled or
 # rebuilt). --env-file /dev/null keeps the repo's .env out; SSHPORT=0 lets
-# Docker pick the host port, which changes on every `up`.
+# Docker pick the host port, which can change on every `up`.
 echo "== compose home volume (survives down; key change) =="
 PROJ="r2u-ssh-smoke-$$"
 VOL="${PROJ}_home"
