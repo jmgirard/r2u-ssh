@@ -72,13 +72,15 @@ git's other recommended packages (not requested; `--no-install-recommends` stays
 - AC4 evidence (2026-11-05, branch 701d10e): CHANGELOG `[Unreleased]` > Added has the `less` entry (git commands that page use `less` instead of `more`); DESIGN "The image provides" git bullet and Function Families stage 3 both name `less`; Dockerfile:37 section-3 comment names `less`.
 - Consistency gate (2026-11-05): `cairn_validate.py` exit 0 (1 advisory WARN, the `cairn/references/pdf/` ignore entry, already a candidate row); hadolint clean and `docker build --no-cache` exit 0; base pinned to the `rocker/r2u:24.04` version tag; no secrets in ENV/ARG/COPY (`BASE_DIGEST` is public provenance); `.dockerignore` present and excludes `.git`; CHANGELOG Unreleased has the entry; no IP/GP line changed, so `cairn_impact` skipped.
 - spawned: diff-bug, blame-history, prior-review, ripple
-- diff-bug #1: CHANGELOG entry says `git log`/`git diff` use `less`, but Test 7 enforces only that git's default pager resolves to less — fix now (narrow the entry to the default pager)
-- diff-bug #2: DESIGN extras-bar paragraph names only git and does not record `less` as a D-004 support package — fix now
+- diff-bug #1: CHANGELOG entry says `git log`/`git diff` use `less`, but Test 7 enforces only that git's default pager resolves to less — fix now (narrow the entry to the default pager), fixed a9fce1a, 1bbc7f9
+- diff-bug #2: DESIGN extras-bar paragraph names only git and does not record `less` as a D-004 support package — fix now, fixed a9fce1a
 - diff-bug #3–#8: Test 7 can only false-fail; runtime pager chain and no preset pager settings confirmed on r2u-ssh:m06; 13 `ok` calls; lint and layering clean; stage 3 matches the Dockerfile; header item 7 is contract, not history — noted, no defect reported
-- blame-history #1: extras bar and GP2 admit `less` without bar text naming it; git bullet still says "binary only" — fix now for the extras-bar paragraph (same fix as diff-bug #2); GP2 part rejected (false): GP2 names tools that cleared the bar, and D-004 records that `less` did not enter as a new extra
+- blame-history #1: extras bar and GP2 admit `less` without bar text naming it; git bullet still says "binary only" — fix now for the extras-bar paragraph (same fix as diff-bug #2), fixed a9fce1a; GP2 part rejected (false): GP2 names tools that cleared the bar, and D-004 records that `less` did not enter as a new extra
 - blame-history #2: the "before = more" premise is unverified — reject (false): AC1 evidence ran the branch smoke.sh on an origin/main worktree and Test 7 reported `/usr/bin/more`
 - prior-review #1: CHANGELOG claim is wider than the SSH-only check — reject (false): `docker run --entrypoint bash r2u-ssh:review` showed the `pager` alternative at `/usr/bin/less` (auto) for root and for a `su - rocker` login shell with no SSH, and no PAGER/GIT_PAGER/LESS set
 - ripple #1: ROADMAP candidate row "Add less so git gets a full pager" still describes `more` — reject (planned change): step 9 hygiene graduates the absorbed row (records-hygiene §1)
-- ripple #2: DESIGN extras-bar paragraph does not mention `less` — fix now (same fix as diff-bug #2)
+- ripple #2: DESIGN extras-bar paragraph does not mention `less` — fix now (same fix as diff-bug #2), fixed a9fce1a
 - ripple #3: GP2 names only git — reject (false): `less` is a D-004 support package, not a tool that cleared the bar, so GP2 stays accurate
-- ripple #4: README.md:8 lists what the image provides and omits `less` — fix now (add it to the git line)
+- ripple #4: README.md:8 lists what the image provides and omits `less` — fix now (add it to the git line), fixed a9fce1a
+- AC4 re-check after fixes (2026-11-05, 1bbc7f9): CHANGELOG Unreleased > Added line 15 reads "git output now pages through `less` (git's default pager) instead of `more`"; DESIGN bullet, stage 3, and Dockerfile:37 unchanged and still name `less`. hadolint clean, build OK after a9fce1a.
+- snapshot: no `_snaps` or `__snapshots__` files in the diff.
