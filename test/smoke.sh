@@ -2,7 +2,7 @@
 # Smoke / regression harness for the r2u-ssh image.
 #
 # Verifies the image's runtime-contract behaviors end to end:
-#   1. USERNAME is gone and the SSH user is `rocker`.
+#   1. USERNAME is gone and the SSH user is `rocker`, with UID and GID 1002.
 #   2. Fail-closed: a keyless container exits non-zero with a clear error.
 #   3. Core contract (IP3): with a key, sshd starts, SSH connects as rocker,
 #      and bspm installs a binary R package.
@@ -15,6 +15,11 @@
 #   8. A key mounted at /keys/authorized_keys, with no env var, lets SSH connect.
 #   9. A mounted key wins over AUTHORIZED_KEYS_B64: the mounted key connects
 #      and the env-var key is refused.
+#  10. With the repo's docker-compose.yml, a file in /home/rocker survives
+#      `docker compose down` and `up -d`, still owned and writable by rocker;
+#      `down -v` removes the home volume.
+#  11. On that same home volume, a changed key replaces the old one: the new
+#      key connects and the old key is refused.
 #
 # Usage: test/smoke.sh [image-tag]   (default tag: r2u-ssh:smoke — built here)
 set -euo pipefail
@@ -27,6 +32,11 @@ PASS=0
 FAIL=0
 
 cleanup() {
+  # Tests 10-11 bring up a compose project of their own; remove it and its
+  # home volume. PROJ is set only once those tests start.
+  if [[ -n "${PROJ:-}" ]]; then
+    compose down -v >/dev/null 2>&1 || true
+  fi
   for c in "${CONTAINERS[@]:-}"; do
     [[ -n "$c" ]] && docker rm -f "$c" >/dev/null 2>&1 || true
   done
@@ -104,9 +114,9 @@ ssh_run() {  # ssh_run <port> <remote-command>   (with the main key, "$WORK/id")
   ssh_as "$WORK/id" "$1" "$2"
 }
 
-wait_for_ssh() {  # wait_for_ssh <port>
+wait_for_ssh() {  # wait_for_ssh <port> [private-key]   (default: "$WORK/id")
   for _ in $(seq 1 30); do
-    if ssh_run "$1" true >/dev/null 2>&1; then return 0; fi
+    if ssh_as "${2:-$WORK/id}" "$1" true >/dev/null 2>&1; then return 0; fi
     sleep 1
   done
   return 1
@@ -121,6 +131,10 @@ if wait_for_ssh "$PORT"; then
   ok "sshd starts and accepts the key"
   WHO="$(ssh_run "$PORT" 'whoami' | tr -d '\r\n')"
   if [[ "$WHO" == "rocker" ]]; then ok "SSH user is rocker"; else bad "SSH user is '$WHO', expected rocker"; fi
+  # Fixed IDs keep files in a kept home volume owned by rocker across rebuilds.
+  # shellcheck disable=SC2016  # expanded by the remote shell, not here
+  IDS="$(ssh_run "$PORT" 'echo "$(id -u):$(id -g)"' 2>&1 | tr -d '\r\n' || true)"
+  if [[ "$IDS" == "1002:1002" ]]; then ok "rocker has UID and GID 1002"; else bad "rocker UID:GID is '$IDS', expected 1002:1002"; fi
   # bspm intercepts install.packages() and pulls the apt binary (r-cran-uuid).
   # Capture to a variable (not a pipe) so pipefail + grep's early exit can't
   # turn a successful install into a false failure.
@@ -218,6 +232,104 @@ if ssh_run "$PORT4" true >/dev/null 2>&1; then
   fi
 else
   bad "mounted key A did not connect when AUTHORIZED_KEYS_B64 was also set"
+fi
+
+# --- Tests 10 & 11: compose home volume ------------------------------------
+# Run the repo's docker-compose.yml under a project name of our own, so a
+# user's own r2u-ssh project and its home volume are never touched. The
+# override changes only the image (the tag built above, never pulled or
+# rebuilt). --env-file /dev/null keeps the repo's .env out; SSHPORT=0 lets
+# Docker pick the host port, which can change on every `up`.
+echo "== compose home volume (survives down; key change) =="
+PROJ="r2u-ssh-smoke-$$"
+VOL="${PROJ}_home"
+cat > "$WORK/compose.override.yml" <<EOF
+services:
+  r2u-ssh:
+    image: $IMAGE
+    pull_policy: never
+EOF
+
+compose() {  # compose <args...>   (repo compose file + smoke override)
+  docker compose -p "$PROJ" --project-directory "$REPO_ROOT" \
+    -f "$REPO_ROOT/docker-compose.yml" -f "$WORK/compose.override.yml" \
+    --env-file /dev/null "$@"
+}
+
+CPORT=""
+UP_OUT=""
+compose_up() {  # compose_up <key-b64> [up options...]   (sets CPORT and UP_OUT)
+  local key="$1" mapping
+  shift
+  UP_OUT="$(AUTHORIZED_KEYS_B64="$key" SSHPORT=0 compose up -d --no-build "$@" 2>&1)" || return 1
+  mapping="$(compose port r2u-ssh 22 2>/dev/null || true)"
+  CPORT="${mapping##*:}"
+}
+up_tail() { tail -c 200 <<<"$UP_OUT"; }   # last compose up output, for FAIL lines
+
+volume_exists() { docker volume inspect "$1" >/dev/null 2>&1; }
+
+VOL_OURS=0   # set once we know the home volume is ours to check and remove
+if volume_exists "$VOL"; then
+  bad "home volume $VOL already exists before the first up"
+elif VOL_OURS=1 && compose_up "$B64" && wait_for_ssh "$CPORT"; then
+  if ! ssh_run "$CPORT" 'mkdir -p ~/work && printf "%s\n" keep-me > ~/work/sentinel.txt'; then
+    bad "could not write the test file in /home/rocker over SSH"
+  fi
+  if ! compose down >/dev/null 2>&1; then   # no -v: the home volume stays
+    bad "compose down (without -v) failed"
+  fi
+  if compose_up "$B64" && wait_for_ssh "$CPORT"; then
+    SENT="$(ssh_run "$CPORT" 'cat ~/work/sentinel.txt' 2>&1 || true)"
+    if [[ "$(tr -d '\r' <<<"$SENT")" == "keep-me" ]]; then
+      ok "file in /home/rocker survives compose down and up"
+    else
+      bad "file in /home/rocker lost after compose down and up; got: $SENT"
+    fi
+    OWNER="$(ssh_run "$CPORT" 'stat -c %U ~/work/sentinel.txt' 2>&1 || true)"
+    if [[ "$(tr -d '\r\n' <<<"$OWNER")" == "rocker" ]]; then
+      ok "kept file is owned by rocker"
+    else
+      bad "kept file owner is '$OWNER', expected rocker"
+    fi
+    WRITE_OUT="$(ssh_run "$CPORT" 'printf "%s\n" again >> ~/work/sentinel.txt && echo WRITE_OK' 2>&1 || true)"
+    if grep -q WRITE_OK <<<"$WRITE_OUT"; then
+      ok "rocker can write the kept file after the restart"
+    else
+      bad "rocker cannot write the kept file after the restart; got: $WRITE_OUT"
+    fi
+
+    # Test 11: recreate on the same home volume with key B; key A must fail.
+    if compose_up "$B64_B" --force-recreate && wait_for_ssh "$CPORT" "$WORK/id_b"; then
+      set +e
+      A_OUT="$(ssh_run "$CPORT" true 2>&1)"
+      A_CODE=$?
+      set -e
+      if [[ $A_CODE -ne 0 ]] && grep -q 'Permission denied' <<<"$A_OUT"; then
+        ok "changed key replaces the old one on a kept home volume"
+      else
+        bad "old key was not refused after the key changed (exit $A_CODE); got: $A_OUT"
+      fi
+    else
+      bad "new key did not connect after recreating on the kept home volume; compose up said: $(up_tail)"
+    fi
+  else
+    bad "SSH did not connect after compose down and up; compose up said: $(up_tail)"
+  fi
+else
+  bad "compose up with the repo's docker-compose.yml did not give an SSH connection; compose up said: $(up_tail)"
+fi
+
+if [[ $VOL_OURS -eq 1 ]]; then
+  if ! volume_exists "$VOL"; then
+    bad "home volume $VOL missing before compose down -v"
+  elif ! compose down -v >/dev/null 2>&1; then
+    bad "compose down -v failed"
+  elif volume_exists "$VOL"; then
+    bad "compose down -v left the home volume $VOL"
+  else
+    ok "compose down -v removes the home volume"
+  fi
 fi
 
 # --- Summary ---------------------------------------------------------------

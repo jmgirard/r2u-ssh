@@ -23,6 +23,25 @@ pre-1.0 its runtime interface may change between releases.
 
 ### Changed
 
+- Files in the container's home folder (`/home/rocker`) now survive
+  `docker compose down`, because `docker-compose.yml` keeps the whole home
+  folder in a named volume (`home` in that file). `docker compose down -v` deletes that
+  volume and the files in it. R packages installed as Ubuntu binaries (through
+  bspm or apt) are not in the home folder. They are not kept, so you must
+  install them again.
+- The first `docker compose up` after you update starts a new container on a
+  new home volume, so files in the old container are lost. Before that `up`,
+  copy out any files you want to keep, for example with
+  `docker compose cp r2u-ssh:/home/rocker/<file> .` (replace `<file>`).
+- The `positron_cache` volume is no longer used, because the Positron server
+  folder is now in the home volume. After the first `docker compose up` with
+  the new compose file, find the old volume with `docker volume ls`. Its name
+  is usually `<folder>_positron_cache`, where `<folder>` is the name of your
+  clone folder in lowercase. Remove it with `docker volume rm` followed by that
+  name.
+- The `rocker` user now always has UID and GID 1002 (the value earlier builds
+  got), so files kept in the home volume stay owned by `rocker` after a
+  rebuild.
 - The image version label now reads `0.1.0` instead of `1.0.0`, honestly
   reflecting that the runtime interface is still pre-1.0 and may change.
 - The authorized SSH key is now sanitized at boot — carriage returns from

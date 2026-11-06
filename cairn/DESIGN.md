@@ -27,8 +27,12 @@ The image provides:
   and no preset `user.name`/`user.email` or other global config), with `less`
   installed beside it so git's default pager is `less`, not `more` (no pager
   settings preset).
-- Positron affordances: the server-download deps (curl/wget/tar/xz),
-  `~/.positron-server` prepared at boot, and a `positron_cache` volume.
+- Positron affordances: the server-download deps (curl/wget/tar/xz) and
+  `~/.positron-server` prepared at boot.
+- A `home` named volume in `docker-compose.yml` that keeps all of
+  `/home/rocker` (user files, settings, the Positron server) across
+  `docker compose down`. R packages bspm installs as Ubuntu binaries live in
+  the system library and are not kept.
 - A boot script (`boot-sshd.sh`) that prepares `~/.ssh`/`~/.positron-server`,
   installs the key, and starts `sshd`.
 
@@ -136,10 +140,16 @@ contract is:
   env var (base64-decoded at boot, then CR-stripped with one trailing newline
   guaranteed). No key (or an empty decoded key) → clear error and non-zero exit
   (fail closed).
-- **User:** always `rocker`, baked at build time; no configurability (D-002).
+- **User:** always `rocker`, UID and GID 1002, baked at build time; no
+  configurability (D-002). The fixed IDs keep files in a kept home volume owned
+  by `rocker` across rebuilds.
 - **Entrypoint:** `CMD ["/usr/local/bin/boot-sshd.sh"]` → `exec sshd -D -e`.
-- **State:** `positron_cache` named volume at `/home/rocker/.positron-server`
-  persists the Positron remote server across container recreations.
+- **State:** the `home` named volume at `/home/rocker` persists user files,
+  settings, and the Positron remote server across container recreations;
+  `docker compose down -v` deletes it. Docker fills a new volume from the
+  image's `/home/rocker` once, so later image changes to that folder do not
+  reach an existing volume. `boot-sshd.sh` rewrites `~/.ssh/authorized_keys` at
+  every boot, so a changed key replaces the old one on a kept volume.
 
 ## Known issues
 
