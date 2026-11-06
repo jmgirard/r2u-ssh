@@ -14,6 +14,9 @@ pre-1.0 its runtime interface may change between releases.
 - Base-image provenance labels (`org.opencontainers.image.base.name` and
   `.base.digest`) so a pulled image records which `rocker/r2u:24.04` digest it
   was built from.
+- `git` is now installed in the image, so it works in a Positron SSH session
+  without installing it first. No git identity is preset: set your own
+  `user.name` and `user.email` before you commit.
 
 ### Changed
 
