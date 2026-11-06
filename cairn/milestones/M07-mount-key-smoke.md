@@ -70,6 +70,7 @@ Extend `test/smoke.sh` to cover the mounted-key boot path, publishing every test
 - 2026-11-05: claim audit: not owed — internal tier.
 - 2026-11-05: all tasks done; status review.
 - 2026-11-05: review: AC4 and AC5 boxes were ticked one edit before their evidence lines landed (the evidence edits missed on a twice-matching anchor); evidence lines added and checked present before any further step.
+- 2026-11-05: step-7 approval: m07-mount-key-smoke approved for merge
 
 ## Decisions
 
