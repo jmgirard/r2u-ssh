@@ -23,7 +23,7 @@ The image provides:
   base64-encoded `AUTHORIZED_KEYS_B64` env var (or a mounted `/keys/authorized_keys`).
 - A non-root user (`rocker`) with passwordless `sudo`.
 - `bspm` enabled in R using the sudo backend (`options(bspm.sudo = TRUE)`).
-- `git`, baked in as the one day-one-universal extra (binary only: no git-lfs
+- `git`, baked in as a day-one-universal extra (binary only: no git-lfs
   and no preset `user.name`/`user.email` or other global config).
 - Positron affordances: the server-download deps (curl/wget/tar/xz),
   `~/.positron-server` prepared at boot, and a `positron_cache` volume.

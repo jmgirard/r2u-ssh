@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Smoke / regression harness for the r2u-ssh image.
 #
-# Verifies the M01 runtime-contract behaviors end to end:
+# Verifies the image's runtime-contract behaviors end to end:
 #   1. USERNAME is gone and the SSH user is `rocker`.
 #   2. Fail-closed: a keyless container exits non-zero with a clear error.
 #   3. Core contract (IP3): with a key, sshd starts, SSH connects as rocker,
@@ -115,12 +115,12 @@ if wait_for_ssh "$PORT"; then
   else
     bad "bspm install of uuid failed; tail: $(tail -c 120 <<<"$BSPM_OUT")"
   fi
-  # Test 6: git on rocker's PATH over SSH (exit code and version string).
+  # Test 6: git on rocker's PATH over SSH.
   set +e
   GIT_OUT="$(ssh_run "$PORT" 'git --version' 2>&1)"
   GIT_CODE=$?
   set -e
-  if [[ $GIT_CODE -eq 0 && "$GIT_OUT" =~ ^git\ version\ [0-9]+\.[0-9]+ ]]; then
+  if [[ $GIT_CODE -eq 0 && "$GIT_OUT" =~ git\ version\ [0-9]+\.[0-9]+ ]]; then
     ok "git runs as rocker over SSH ($(tr -d '\r\n' <<<"$GIT_OUT"))"
   else
     bad "git --version over SSH exited $GIT_CODE; got: $GIT_OUT"

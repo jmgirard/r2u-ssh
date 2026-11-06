@@ -34,7 +34,7 @@ RUN useradd -m -s /bin/bash rocker \
     && install -d -m 700 -o rocker -g rocker /home/rocker/.ssh
 
 # ------------------------------------------------------------
-# 3. Install OpenSSH server
+# 3. Install OpenSSH server, Positron download tools, and git
 # ------------------------------------------------------------
 
 # hadolint ignore=DL3008
