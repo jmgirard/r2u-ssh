@@ -24,7 +24,9 @@ The image provides:
 - A non-root user (`rocker`) with passwordless `sudo`.
 - `bspm` enabled in R using the sudo backend (`options(bspm.sudo = TRUE)`).
 - `git`, baked in as a day-one-universal extra (binary only: no git-lfs
-  and no preset `user.name`/`user.email` or other global config).
+  and no preset `user.name`/`user.email` or other global config), with `less`
+  installed beside it so git's default pager is `less`, not `more` (no pager
+  settings preset).
 - Positron affordances: the server-download deps (curl/wget/tar/xz),
   `~/.positron-server` prepared at boot, and a `positron_cache` volume.
 - A boot script (`boot-sshd.sh`) that prepares `~/.ssh`/`~/.positron-server`,
@@ -54,7 +56,8 @@ The Dockerfile's numbered stages, each a distinct concern:
 1. **Base + metadata** — `FROM rocker/r2u:24.04`, OCI labels.
 2. **User creation** — non-root `rocker` with `~/.ssh`.
 3. **sshd install & config** — openssh-server plus the Positron server-download
-   deps and git; key-only auth via `/etc/ssh/sshd_config.d/zz-container.conf`.
+   deps, git, and less (git's pager); key-only auth via
+   `/etc/ssh/sshd_config.d/zz-container.conf`.
 4. **Boot script** — `/usr/local/bin/boot-sshd.sh` (a `COPY`'d file): resolve
    home, prepare `~/.ssh` and `~/.positron-server`, install the CR-stripped key
    from mount or env var (fail closed if none), fix ownership, exec `sshd -D -e`.

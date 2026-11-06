@@ -42,7 +42,7 @@ git's other recommended packages (not requested; `--no-install-recommends` stays
 - [x] T2: Add smoke Test 7 (capture output to a variable before matching), update the header
       list, run it on the branch, then copy the branch's `test/smoke.sh` into a worktree of the
       default branch and record that Test 7 fails there with `/more`.
-- [ ] T3: Add the CHANGELOG entry; update the DESIGN git bullet and Function Families stage 3.
+- [x] T3: Add the CHANGELOG entry; update the DESIGN git bullet and Function Families stage 3.
 
 ## Work log
 
@@ -57,6 +57,8 @@ git's other recommended packages (not requested; `--no-install-recommends` stays
 - 2026-11-05: implement started on branch m006-less-pager, cut from origin/main at f458040.
 - 2026-11-05: T1 done: `less` added after `git` on the section-3 apt line and named in its comment; hadolint (Docker image) clean, `docker build` exit 0.
 - 2026-11-05: T2 done: smoke Test 7 added inside the keyed-SSH block (output captured, CR/LF stripped, matched `*/less`); SC2016 disabled on that line because the remote shell expands it; shellcheck v0.11.0 clean; branch run 13 passed 0 failed with `/usr/bin/less`; branch script in a detached origin/main worktree (f458040) gave 12 passed 1 failed, Test 7 reporting `/usr/bin/more`.
+- 2026-11-05: T3 done: CHANGELOG Unreleased > Added entry (claim backed by smoke Test 7); DESIGN git bullet and stage 3 name `less`; hadolint clean, build OK.
+- 2026-11-05: the simple-english lint hook flagged 6 hits in older CHANGELOG lines (5, 12, 28, 29, 31, 38), none in the new entry; left as they are, outside M06 scope.
 
 ## Decisions
 
