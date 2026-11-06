@@ -5,7 +5,7 @@ This repository builds a Docker image based on [rocker/r2u](https://github.com/r
 - SSH access using a **base64-encoded** public key via `AUTHORIZED_KEYS_B64`
 - `sudo` installed and configured (NOPASSWD) for the main user
 - `bspm` enabled in R with the sudo backend
-- `git` installed (no `user.name` or `user.email` is preset, so set your own with `git config --global`)
+- `git` installed, with `less` as its default pager (no `user.name` or `user.email` is preset, so set your own with `git config --global`)
 - A minimal boot script (`boot-sshd.sh`) that prepares `~/.ssh` and starts `sshd`
 
 The primary purpose of this image is to enable an R environment with Ubuntu Binaries to run in Positron via SSH.

@@ -77,7 +77,8 @@ The Dockerfile's numbered stages, each a distinct concern:
 - **Extras bar:** a tool is baked in only if essentially every Positron R user
   needs it in their first session ("day-one universal"). git clears the bar
   and is baked in (binary only; per-user git config stays a runtime concern,
-  GP7); quarto/texlive wait for demonstrated demand. The default
+  GP7), with `less` beside it as git's pager, a support package for git rather
+  than a new extra (D-004); quarto/texlive wait for demonstrated demand. The default
   answer to "please add X" is `bspm::install…`/`apt` at runtime.
 - **Docs:** every README recipe must work copy-paste on macOS *and* Windows
   PowerShell.
