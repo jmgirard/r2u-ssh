@@ -113,6 +113,7 @@ keys (the candidate row "Generate SSH host keys at boot").
 - 2026-11-05: T4 done: hadolint clean, shellcheck clean on both scripts, smoke 20/20, no smoke volumes left, cairn_validate passes (1 standing advisory). The volume observations are the m08obs line above.
 - 2026-11-05: claim audit: 24 claims read, 4 corrected — README.md, CHANGELOG.md, test/smoke.sh (volume names `<folder>_home` and `<folder>_positron_cache` stated as usual, lowercase; SSHPORT=0 port "can change"); the re-read held 3 and asked the README name to carry the same "usually ... lowercase" caveat, which was applied.
 - 2026-11-05: implement complete; status review. Since the last smoke run only a smoke.sh comment and doc text changed (shellcheck re-run clean).
+- 2026-11-06: step-7 approval: m08-home-volume approved for merge
 
 ## Decisions
 
