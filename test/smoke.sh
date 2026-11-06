@@ -11,6 +11,7 @@
 #   5. OCI labels (M02): honest 0.1.0 version (GP3) and base-image provenance
 #      name are present on the built image.
 #   6. git (GP2 day-one-universal extra) runs for rocker over SSH.
+#   7. git's default pager resolves to less (not more) for rocker over SSH.
 #
 # Usage: test/smoke.sh [image-tag]   (default tag: r2u-ssh:smoke — built here)
 set -euo pipefail
@@ -124,6 +125,15 @@ if wait_for_ssh "$PORT"; then
     ok "git runs as rocker over SSH ($(tr -d '\r\n' <<<"$GIT_OUT"))"
   else
     bad "git --version over SSH exited $GIT_CODE; got: $GIT_OUT"
+  fi
+  # Test 7: git's default pager, followed through the alternatives symlinks.
+  # shellcheck disable=SC2016  # expanded by the remote shell, not here
+  PAGER_OUT="$(ssh_run "$PORT" 'readlink -f "$(command -v "$(git var GIT_PAGER)")"' 2>&1 || true)"
+  PAGER_PATH="$(tr -d '\r\n' <<<"$PAGER_OUT")"
+  if [[ "$PAGER_PATH" == */less ]]; then
+    ok "git's default pager resolves to less ($PAGER_PATH)"
+  else
+    bad "git's default pager resolves to '$PAGER_PATH', expected a path ending in /less"
   fi
 else
   bad "sshd never accepted a connection"

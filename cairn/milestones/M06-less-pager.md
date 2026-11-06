@@ -39,7 +39,7 @@ git's other recommended packages (not requested; `--no-install-recommends` stays
 
 - [x] T1: Add `less` to the section-3 apt line in `Dockerfile` and to its section comment; run
       hadolint and `docker build`.
-- [ ] T2: Add smoke Test 7 (capture output to a variable before matching), update the header
+- [x] T2: Add smoke Test 7 (capture output to a variable before matching), update the header
       list, run it on the branch, then copy the branch's `test/smoke.sh` into a worktree of the
       default branch and record that Test 7 fails there with `/more`.
 - [ ] T3: Add the CHANGELOG entry; update the DESIGN git bullet and Function Families stage 3.
@@ -56,6 +56,7 @@ git's other recommended packages (not requested; `--no-install-recommends` stays
 - 2026-11-05: criteria audit (full mode): 3 findings, all fixed — AC1 runs the branch's smoke script from a default-branch worktree, since smoke.sh always rebuilds its own tree; Goal narrowed to "default pager resolves to less" (the check covers the alternatives path, not `PAGER` or `core.pager`); AC4 adds Function Families stage 3 and the Dockerfile comment. No IP conflict.
 - 2026-11-05: implement started on branch m006-less-pager, cut from origin/main at f458040.
 - 2026-11-05: T1 done: `less` added after `git` on the section-3 apt line and named in its comment; hadolint (Docker image) clean, `docker build` exit 0.
+- 2026-11-05: T2 done: smoke Test 7 added inside the keyed-SSH block (output captured, CR/LF stripped, matched `*/less`); SC2016 disabled on that line because the remote shell expands it; shellcheck v0.11.0 clean; branch run 13 passed 0 failed with `/usr/bin/less`; branch script in a detached origin/main worktree (f458040) gave 12 passed 1 failed, Test 7 reporting `/usr/bin/more`.
 
 ## Decisions
 
