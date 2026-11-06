@@ -89,7 +89,7 @@ Evidence gathered 2026-11-05 at branch head 384a712.
 - diff-bug #3: Test 8 repeats Test 9's mount-branch path — reject (false): Test 8 is the only check with no env var set, so it alone catches a mount read only when `AUTHORIZED_KEYS_B64` is also set; Test 8 is also Scope In.
 - diff-bug #4: `wait_for_ssh || true` then `if ssh_run` makes one extra SSH connection — reject (planned change): the explicit `ssh` keeps the `if` directly on ssh's exit status as AC1 and AC2 state.
 - diff-bug #5: key-B half relies on sshd's refusal, not the installed file — reject (planned change): AC2 calls for the SSH form; Ubuntu 24.04 ships OpenSSH 9.6, and one failed auth triggers no penalty.
-- diff-bug #6: `host_port` comment implies the harness survives an exited container, but Test 4's `docker exec` still ends the script — fix now.
+- diff-bug #6: `host_port` comment implies the harness survives an exited container, but Test 4's `docker exec` still ends the script — fix now, fixed 5e88c11 (shellcheck exit 0; `test/smoke.sh` 15 passed, 0 failed after the fix).
 - diff-bug #7: a failed `docker run -d` ends the script with no FAIL line — reject (edge): only a Docker daemon error or an unusable mount path reaches it; the effect is an error exit, and the existing `docker run` lines behave the same.
 - diff-bug #8: ssh sessions still read the host's `~/.ssh/config` (`-F /dev/null` would isolate them) — follow-up: parked row "Make smoke SSH ignore the user's config", promote when a user reports it; pre-existing since `ssh_run` was added, and no false PASS is possible.
 - diff-bug #9: `BatchMode=yes` now applies to every session — reject (false): keys have no passphrase and password and keyboard-interactive auth are off, so no check changes meaning.
