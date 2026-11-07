@@ -183,6 +183,12 @@ Confirmed by the maintainer (2026-07-17 design interview):
   `diag/mirror-arch-probe`, r2u discussion #159), so a red CI run can come from
   the mirror and not the image. Since M10 the smoke test also reads the latest
   Positron release from GitHub's API and downloads the Positron server from
-  Posit's CDN, so either site can also turn a run red. arm64 and the Windows PowerShell
+  Posit's CDN, so either site can also turn a run red. Since M11, when the
+  smoke test cannot connect to the r2u mirror or Posit's CDN, its FAIL line
+  says so and it prints an `UPSTREAM-UNREACHABLE:` line, and
+  `.github/workflows/ci-rerun.yml` reruns that CI run's failed jobs once, on
+  a new runner. This rerun path has not run live, because a `workflow_run`
+  workflow runs only from the default branch. Docker Hub pulls and the
+  GitHub release lookup are not marked. arm64 and the Windows PowerShell
   path stay manual: arm64 is tested on the maintainer's Mac, and Windows
   mainly by README followers, the audience least equipped to debug.
