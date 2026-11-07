@@ -66,3 +66,47 @@ Make `test/smoke.sh` download, unpack, and start the Positron remote server over
 - 2026-11-06: T4 done: hadolint v2.15.1 and shellcheck v0.11.0 clean. Plant runs used detached worktrees of 51aed5d with smoke.sh trimmed to build, key prep, test 16, and summary (script in the session scratchpad, not committed). POSITRON_VERSION=2026.10.2-3 passed (linux-arm64, HTTP/1.1 403). Each plant gave exit 1 and one FAIL naming its step: lookup URL edited to releases/no-such-release → "version lookup failed" (curl 404); POSITRON_VERSION=2099.01.0-1 → "download and unpack" (wget ERROR 403); Dockerfile line removing libstdc++.so.6 → "server start" (node: libstdc++.so.6 cannot open shared object file); probe edited to port 1 → "HTTP probe" (curl 7, could not connect).
 - 2026-11-06: claim audit: not owed — internal tier.
 - 2026-11-06: implement complete; status review.
+- 2026-11-06: review started; no PR yet, Copilot round off, main not moved since the cut (route d).
+
+## Review
+
+Pass 1 (2026-11-06), branch head 385eb1e.
+
+spawned: diff-bug, blame-history, prior-review, ripple
+
+Findings and dispositions:
+
+- diff-bug #1: AC4 has no evidence and the amd64 path never ran — reject (false as a defect): AC4's CI half is verified from the PR's CI run, which the merge wait requires green before any merge.
+- diff-bug #2: wget has no total time limit, so a slow transfer hangs until the job timeout with no FAIL line — fix now.
+- diff-bug #3: the host lookup curl has no `--max-time` — fix now.
+- diff-bug #4: the token is on curl's command line, visible to `ps` on the host — fix now (header read from stdin).
+- diff-bug #5: a malformed `POSITRON_VERSION` reports "version lookup failed" with an empty tail — fix now (message names the variable).
+- diff-bug #6: the source comment says wget and start flags are copied, but `--continue` and `--enable-remote-auto-shutdown` are dropped and the folder is keyed by version — fix now (comment and source note).
+- diff-bug #7: `kill` may leave node children, and the start-failure path never kills the server — fix now for the failure path; the rest reject (false as a defect): the container is removed at exit.
+- diff-bug #8: the port is taken as the last word of the log line — reject (false): the grep requires digits after "on", and the observed line ends at the port (`Extension host agent listening on 36015`).
+- diff-bug #9: the probe accepts any status and an `http_proxy` could answer — reject (false): the probe asks only for an HTTP status line from the port the server's own log names (AC1), and the check's containers get no proxy variables (only `AUTHORIZED_KEYS_B64`).
+- diff-bug #10: the first grep can run before the log file exists, adding a "No such file" line — fix now (stderr dropped).
+- diff-bug #11: the token-file write is unchecked — fix now (reported as server start with its own message).
+- diff-bug #12: the remote script is heredoc data, so CI's shellcheck never reads it — reject (style): linter coverage; this pass runs shellcheck on the extracted script by hand.
+- diff-bug #13: `read -r -d ''` without `IFS=` trims the script's outer whitespace — reject (style): harmless for this content.
+- diff-bug #14: bash 3.2 coverage not shown — reject (false): `/usr/bin/env bash` on the host is GNU bash 3.2.57 (checked 2026-11-06 in implement).
+- diff-bug #15: the version is unquoted in the remote command — reject (false): the version must match `^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$` before it is used.
+- diff-bug #16: `CID` and `PORT` reuse test 1's names — reject (style).
+- diff-bug #17: a long line in DESIGN.md — reject (style).
+- diff-bug #18: the INDEX entry uses `positron-server-setup.md`, not the citekey — reject (false): `cairn_validate` reads only the `<name>.md` form.
+- diff-bug #19: the hygiene stamp on main is dated after this work log — reject (false as a defect of this diff): the line is on main, and step 9 replaces it.
+- blame-history #1: the latest-release lookup can turn main red with no image change — reject (planned change): the plan chose the latest release over a pin; the flakes row now names this cost (ripple #2).
+- blame-history #2: the ready-line regex `[0-9]+` is narrower than the source's `.+` — reject (false): the check starts with `--port=0`, where the source reads a numeric port; a non-numeric value comes only with a socket path, which the check does not use.
+- blame-history #3: the token is scoped to the whole step and is in curl's argv — fixed by diff-bug #4 for argv; step scope reject (false): smoke.sh is the step, and containers never get it.
+- blame-history #4: `kill` sends SIGTERM with no wait — reject (false as a defect): the container is removed at exit.
+- blame-history #5: DESIGN.md line widths — reject (style).
+- blame-history #6: `--enable-remote-auto-shutdown` is left out — reject (false as a defect): recorded as an open question in the source note.
+- prior-review #1: amd64 never ran, AC4 unverified — reject (false as a defect): as diff-bug #1.
+- prior-review #2: plant runs used a trimmed smoke.sh, not the M06 lesson's full copy — reject (false as a defect): the trimmed copy kept the harness header (`set -euo pipefail`, cleanup trap, helpers) and test 16 verbatim, and the full harness ran green.
+- prior-review #3: the 45-minute job limit is not checked against the new download — reject (false as a defect): the PR's CI run measures it before the merge.
+- prior-review #4: token in argv — fixed by diff-bug #4.
+- prior-review #5: DESIGN.md wording widths — reject (style).
+- prior-review #6: the server stays up after a start failure — fixed by diff-bug #7.
+- ripple #1: the M10 candidate row still says smoke.sh never starts the Positron server — reject (false as a defect): post-merge hygiene graduates that row.
+- ripple #2: the "Keep upstream flakes from failing CI" row names only the r2u mirror and Docker Hub — fix now (row names GitHub's API and Posit's CDN).
+- ripple #3: DESIGN.md line width — reject (style).
