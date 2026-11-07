@@ -9,7 +9,7 @@ _Last hygiene check: 2026-11-07 — M09 archived; host-key row graduated; M06 ro
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M10 | Smoke-test the Positron server install | planned | — | normal | milestones/M10-positron-server-smoke.md |
+| M10 | Smoke-test the Positron server install | in-progress | — | normal | milestones/M10-positron-server-smoke.md |
 | M09 | Generate SSH host keys at boot | done | — | high | milestones/archive/M09-host-keys-at-boot.md |
 | M08 | Keep user work across compose down | done | — | high | milestones/archive/M08-home-volume.md |
 | M07 | Mount-key smoke tests | done | — | normal | milestones/archive/M07-mount-key-smoke.md |
