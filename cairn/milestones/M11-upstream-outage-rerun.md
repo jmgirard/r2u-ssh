@@ -87,3 +87,27 @@ Evidence gathered 2026-11-06 at 33f63b8 on the maintainer's arm64 Mac (image tag
 - AC5: `ci-rerun.yml` has one `permissions:` block (line 11) with `actions: write` and `contents: read`, and its one job declares none; `ci.yml` line 12 `permissions:` holds only `contents: read`, and `git diff main -- .github/workflows/ci.yml` has no permission lines.
 - AC6: DESIGN.md Known issues "Platform-biased testing" (lines 186-192) says a failure that cannot connect to the r2u mirror or Posit's CDN prints an `UPSTREAM-UNREACHABLE:` line and `ci-rerun.yml` reruns the failed jobs once on a new runner, and "This rerun path has not run live, because a `workflow_run` workflow runs only from the default branch."
 - Consistency gate: `cairn_validate.py` all checks passed (1 advisory WARN, the stale `cairn/references/pdf/` ignore entry, already a candidate row); hadolint clean; `docker build` succeeded in each smoke run; base pinned as `rocker/r2u:24.04`; Dockerfile and build context unchanged, so no secret or `.dockerignore` change; no CHANGELOG entry, since no image user sees a change; no principle changed, so `cairn_impact` skipped.
+
+spawned: diff-bug, blame-history, prior-review, ripple
+
+- diff-bug #1: a rerun of an older failed PR run joins CI's concurrency group and can cancel a newer push's in-progress run — fix now (script skips the rerun unless the run is still the newest CI run on its branch)
+- diff-bug #2: a failed `gh run view --log-failed` makes the rerun job exit non-zero with no rerun — reject, edge: only a GitHub API failure reaches it, outside common use, and the effect is a visible error while the CI run stays red
+- diff-bug #3: the r2u probe counted any non-zero exit (ssh failing, a TLS or CA error) as an outage, so an image fault could print "not an image fault" and the marker — fix now (only curl exits 6, 7, 28 from a probe that SSH ran count)
+- diff-bug #4: a mirror failure that stops `docker build` gets no marker — follow-up, parked row "Mark Docker Hub pull outages in CI" (promote when it fails a CI run here; `apt-get update` usually only warns)
+- diff-bug #5: one 10 s probe can miss an intermittent mirror, so no rerun — reject, false as a defect: it errs toward no rerun, the plain FAIL still shows
+- diff-bug #6: a CDN or mirror 5xx gets no marker, and a firewall 403 reads as "not on Posit's CDN yet" — 5xx: follow-up, same parked row; firewall 403: reject, edge: a CDN firewall block on the runner is outside common use, and the effect is a FAIL line whose reason says "can take time to appear", not a pass
+- diff-bug #7: the stub `gh` ignored flags, so a `--log-failed` to `--log` regression passed; the fixture copies the assumed log format — first part fix now (stub answers only the exact calls; a planted `--log` turned 3 cases red); second part reject, dependency behavior: real `gh` output cannot be checked offline
+- diff-bug #8: the script repeats the workflow `if:` guards — reject, planned change: AC4 has the script decide, and the job `if:` saves a runner
+- diff-bug #9: every passing CI run adds a skipped "CI rerun" run in the Actions tab — reject, planned change: the `workflow_run` trigger AC4 names does this
+- diff-bug #10: unquoted `${SMOKE_BLOCK_HOSTS:-}` is glob-expanded — reject, edge: a test-only variable holding host names, no glob characters in use
+- diff-bug #11: unverified whether a token rerun of a first-time fork PR needs approval, and whether a rerun fires `workflow_run` again — reject, noted: the attempt guard stops a loop either way, and DESIGN.md says the rerun path has not run live
+- blame-history #1: a mirror 5xx answer gets no marker, so no rerun — follow-up, parked row "Mark Docker Hub pull outages in CI"
+- blame-history #2: `gh run view` failure under `set -e` leaves no rerun — reject, edge: same as diff-bug #2
+- blame-history #3: no D-entry records the rerun workflow — reject, planned change: the approach and the token grant are recorded in this work log; no dependency changed
+- blame-history #4: Docker Hub pulls in the lint steps are unmarked — reject, planned change: Scope Out, parked row
+- blame-history #5: `actions: write` with fork-triggered `workflow_run` — reject, noted: the job runs only default-branch code, and the reviewer found the risk low
+- blame-history #6: the marker literal sits on the host side of the CDN branch — reject, false: line 688 is the Positron check's handling of the CDN connect failure, which AC3 names
+- prior-review #1: no sign actionlint ran on `ci-rerun.yml` — reject, false: actionlint 1.7.12 ran clean on both workflows (work log and AC4 evidence)
+- prior-review #2: the marker match is not anchored at a line start — reject, edge: only a log line quoting the marker from elsewhere reaches it, and the effect is one extra rerun
+- ripple #1: candidate row "Keep upstream flakes from failing CI" still lists "a rerun rule at the merge step" — reject, planned change: the row ends "started M11", and post-merge hygiene graduates it
+- ripple #2: smoke.sh comment said any outside-site failure prints the marker — fix now (comment names the r2u mirror and Posit's CDN only)

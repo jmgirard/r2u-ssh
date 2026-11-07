@@ -30,4 +30,5 @@ jobs:
           RUN_ID: ${{ github.event.workflow_run.id }}
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
-        run: .github/scripts/ci-rerun.sh "$RUN_ID" "$CONCLUSION" "$ATTEMPT"
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: .github/scripts/ci-rerun.sh "$RUN_ID" "$CONCLUSION" "$ATTEMPT" "$BRANCH"

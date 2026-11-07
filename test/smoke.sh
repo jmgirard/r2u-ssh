@@ -81,8 +81,9 @@ trap cleanup EXIT
 ok()   { printf 'PASS: %s\n' "$1"; PASS=$((PASS + 1)); }
 bad()  { printf 'FAIL: %s\n' "$1"; FAIL=$((FAIL + 1)); }
 
-# A check that fails because an outside site did not answer also prints one
-# marker line naming the host. The CI rerun workflow
+# When the bspm check or the Positron download fails because the container
+# could not connect to the r2u mirror or Posit's CDN, the script also prints
+# one marker line naming the host. The CI rerun workflow
 # (.github/workflows/ci-rerun.yml) reruns a failed run once when its log
 # holds that marker.
 
@@ -238,12 +239,15 @@ if wait_for_ssh "$PORT"; then
   else
     # bspm gets the binary from the r2u mirror. If the container cannot
     # connect to it, say so: that is an upstream outage, not an image fault.
+    # Only curl's no-connection exits count (6 name not resolved, 7 refused,
+    # 28 timed out), and only when SSH itself ran the probe.
     R2U_HOST="r2u.stat.illinois.edu"
-    if ssh_run "$PORT" "curl -sS -o /dev/null --connect-timeout 10 --max-time 30 https://$R2U_HOST/ubuntu/" >/dev/null 2>&1; then
-      bad "bspm install of uuid failed; tail: $(tail -c 120 <<<"$BSPM_OUT")"
-    else
+    R2U_PROBE="$(ssh_run "$PORT" "curl -sS -o /dev/null --connect-timeout 10 --max-time 30 https://$R2U_HOST/ubuntu/; echo \"CURL_EXIT=\$?\"" 2>/dev/null || true)"
+    if grep -qE '^CURL_EXIT=(6|7|28)$' <<<"$R2U_PROBE"; then
       bad "bspm install of uuid failed because the r2u mirror ($R2U_HOST) did not answer from this runner; this is an upstream outage, not an image fault"
       printf 'UPSTREAM-UNREACHABLE: %s\n' "$R2U_HOST"
+    else
+      bad "bspm install of uuid failed; tail: $(tail -c 120 <<<"$BSPM_OUT")"
     fi
   fi
   # Test 6: git on rocker's PATH over SSH.
