@@ -61,9 +61,10 @@ for type in ed25519 ecdsa rsa; do
   fi
   chown root:root "$hostkey"
   chmod 600 "$hostkey"
-  if ! ssh-keygen -y -f "$hostkey" >/dev/null 2>&1; then
+  if ! ssh-keygen -y -P '' -f "$hostkey" >/dev/null 2>&1 </dev/null; then
     echo "ERROR: the SSH host key $hostkey is damaged." >&2
-    echo "       delete it (or the host-key volume) so the next start makes a new one." >&2
+    echo "       With docker compose: run 'docker compose down', then" >&2
+    echo "       'docker volume rm <folder>_ssh-host-keys'; the next start makes new keys." >&2
     exit 1
   fi
 done

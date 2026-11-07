@@ -70,8 +70,9 @@ The Dockerfile's numbered stages, each a distinct concern:
 4. **Boot script** — `/usr/local/bin/boot-sshd.sh` (a `COPY`'d file): resolve
    home, prepare `~/.ssh` and `~/.positron-server`, install the CR-stripped key
    from mount or env var (fail closed if none), fix ownership, set
-   `/etc/ssh/host_keys` to root 700 and create any missing ed25519, ecdsa, or
-   rsa host key there, exec `sshd -D -e`.
+   `/etc/ssh/host_keys` to root 700, create any missing ed25519, ecdsa, or
+   rsa host key there, set each key to root 600 and fail closed on one
+   `ssh-keygen -y` cannot read, exec `sshd -D -e`.
 5. **sudo/bspm wiring** — passwordless sudo for `rocker`;
    `options(bspm.sudo = TRUE)` injected into `Rprofile.site`.
 6. **Runtime surface** — `EXPOSE 22`, `CMD` boot script.
@@ -160,6 +161,7 @@ contract is:
   `ssh-host-keys` named volume at `/etc/ssh/host_keys` holds the SSH host keys;
   `boot-sshd.sh` creates a key only when it is missing, so the host key stays
   the same while the volume lasts, and `docker compose down -v` deletes it. A
+  kept key that `ssh-keygen -y` cannot read stops the boot (GP5). A
   plain `docker run` without that volume gets new host keys per container.
 
 ## Known issues

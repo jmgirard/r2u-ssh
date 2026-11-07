@@ -27,8 +27,9 @@
 #  14. With docker-compose.yml, the ed25519 host key stays the same across
 #      `down` and `up`, a force-recreate, and a recreate onto a second build;
 #      `down -v` removes the host-key volume.
-#  15. On a kept host-key folder, an empty key file is replaced at boot, and a
-#      damaged key stops the boot with a clear error.
+#  15. On a kept host-key folder, an empty key file is replaced at boot, a
+#      damaged key stops the boot with a clear error, and a valid key with
+#      mode 644 is fixed and used.
 #
 # Usage: test/smoke.sh [image-tag]   (default tag: r2u-ssh:smoke — built here)
 set -euo pipefail
@@ -335,6 +336,23 @@ if put_hostkey "not a private key"; then
   fi
 else
   bad "could not write a damaged key file into $HKV"
+fi
+# A valid kept key with mode 644 (sshd refuses such a key) must be fixed and used.
+WANT7="$(docker run --rm -v "$HKV:/k" --entrypoint sh "$IMAGE" -c \
+  'rm -f /k/*; ssh-keygen -q -t ed25519 -N "" -f /k/ssh_host_ed25519_key && chmod 644 /k/ssh_host_ed25519_key && cut -d" " -f1-2 /k/ssh_host_ed25519_key.pub' \
+  2>/dev/null || true)"
+if [[ "$WANT7" == ssh-ed25519* ]]; then
+  CID7="$(boot_on_hkv)"
+  HKV_CONTAINERS+=("$CID7")
+  PORT7="$(host_port "$CID7")"
+  wait_for_ssh "$PORT7" || true   # give sshd time to start; the check below decides
+  if [[ "$(host_key "$PORT7" ed25519)" == "$WANT7" ]]; then
+    ok "a kept host key with mode 644 is fixed and used"
+  else
+    bad "the kept mode-644 host key was not used; logs: $(docker logs "$CID7" 2>&1 | tail -c 200)"
+  fi
+else
+  bad "could not write a mode-644 host key into $HKV"
 fi
 
 # --- Test 8: mounted key only ----------------------------------------------
