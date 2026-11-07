@@ -103,7 +103,7 @@ calls it `ssh-host-keys`, and `docker volume ls` usually lists it as
 `<folder>_ssh-host-keys`. The container makes its host keys the first time it
 starts with a new volume. The volume keeps them the same after
 `docker compose down`, `docker compose up -d`, and a rebuild. Your computer
-uses them to tell that it connects to the same container.
+uses them to make sure that it connects to the same server as before.
 
 R packages that bspm installs as Ubuntu binaries go to a system folder outside
 the home folder, so they are not kept. Each time the container is made new (for
@@ -129,12 +129,13 @@ docker compose down -v
 ```
 
 If `ssh` warns `REMOTE HOST IDENTIFICATION HAS CHANGED` and does not connect,
-the container has new host keys. This happens after `docker compose down -v`,
-and once after you update from a version of this image that had its host keys
-built in. Remove the old key that your computer remembers, then connect again
+the server on that port shows a different host key than your computer
+remembers. With this image, that happens after `docker compose down -v`. It
+also happens once after you update from a version of this image that had its
+host keys built in. Remove the old key that your computer remembers, then connect again
 and accept the new key.
 
-In terminal (bash/powershell):
+In terminal:
 ```
 ssh-keygen -R "[127.0.0.1]:2222"
 ```

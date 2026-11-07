@@ -24,7 +24,7 @@
 #      (`ssh_host_*_key`), with every layer the saved manifest names listed.
 #  13. Two `docker run` containers each present ed25519, ecdsa, and rsa host
 #      keys, all different between the two; /etc/ssh/host_keys is root 700.
-#  14. With docker-compose.yml, the host key stays the same across `down` and
+#  14. With docker-compose.yml, the ed25519 host key stays the same across `down` and
 #      `up`, a force-recreate, and a recreate onto a second image build;
 #      `down -v` removes the host-key volume.
 #
@@ -44,7 +44,7 @@ cleanup() {
   if [[ -n "${PROJ:-}" ]]; then
     compose down -v >/dev/null 2>&1 || true
   fi
-  # Test 14 builds a second image tag; untag it.
+  # Test 14 builds a second image tag; remove it.
   if [[ -n "${IMAGE2:-}" ]]; then
     docker image rm "$IMAGE2" >/dev/null 2>&1 || true
   fi
@@ -75,12 +75,12 @@ echo "== building $IMAGE =="
 docker build -t "$IMAGE" "$REPO_ROOT" >/dev/null
 ok "image builds"
 
-# --- Test 12: no host private key in any image layer (IP2) ------------------
+# --- Test 12: no file named like a host private key in any layer (IP2) ------
 # A key deleted by a later RUN still ships in the lower layer, so list every
-# layer of `docker save`, not the final filesystem. manifest.json names the
-# layers in both the classic and the containerd image store; tar reads each
-# layer whether or not it is gzip-compressed.
-echo "== no SSH host private key in any image layer =="
+# layer of `docker save`, not the final filesystem. The saved manifest.json
+# names the layer files; tar reads each layer whether or not it is
+# gzip-compressed.
+echo "== no file named ssh_host_*_key in any image layer =="
 SAVE="$WORK/save"
 mkdir -p "$SAVE"
 if docker save "$IMAGE" -o "$WORK/image.tar" && tar -xf "$WORK/image.tar" -C "$SAVE"; then
@@ -106,9 +106,9 @@ if docker save "$IMAGE" -o "$WORK/image.tar" && tar -xf "$WORK/image.tar" -C "$S
   elif [[ ${#LIST_FAILED[@]} -gt 0 || $LISTED -ne ${#LAYERS[@]} ]]; then
     bad "listed $LISTED of ${#LAYERS[@]} layers; could not list: ${LIST_FAILED[*]}"
   elif [[ -n "$HOSTKEY_HITS" ]]; then
-    bad "image layers hold SSH host private keys: $HOSTKEY_HITS"
+    bad "image layers hold files named ssh_host_*_key: $HOSTKEY_HITS"
   else
-    ok "no layer holds an SSH host private key ($LISTED layers listed)"
+    ok "no layer holds a file named ssh_host_*_key ($LISTED layers listed)"
   fi
   rm -rf "${WORK:?}/save"   # about the image's size; free it before the other tests
 else
@@ -365,7 +365,7 @@ same_host_key() {  # same_host_key <what-happened>   (reads the key on $CPORT)
   if [[ -n "$now" && "$now" == "$HK_FIRST" ]]; then
     ok "host key unchanged after $1"
   else
-    bad "host key changed after $1 (first '${HK_FIRST:0:40}', now '${now:0:40}')"
+    bad "host key differs or could not be read after $1 (first '${HK_FIRST:0:40}', now '${now:0:40}')"
   fi
 }
 
@@ -417,9 +417,9 @@ elif VOL_OURS=1 && compose_up "$B64" && wait_for_ssh "$CPORT"; then
       fi
       same_host_key "up -d --force-recreate"
 
-      # Test 14, rebuild: a second build of this tree (a changed build arg
-      # reruns every RUN after the ARG, so the openssh-server layer is new)
-      # replaces the container on the same volumes.
+      # Test 14, rebuild: a second build of this tree, with a changed build
+      # arg, replaces the container on the same volumes. Docker's ARG cache
+      # rule reruns every RUN after the ARG; this test does not check that.
       IMAGE2="${IMAGE}-rebuild"
       if docker build -q --build-arg BASE_DIGEST=smoke-rebuild -t "$IMAGE2" "$REPO_ROOT" >/dev/null; then
         cat > "$WORK/compose.rebuild.yml" <<EOF
