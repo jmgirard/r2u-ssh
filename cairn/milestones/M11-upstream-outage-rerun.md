@@ -90,13 +90,13 @@ Evidence gathered 2026-11-06 at 33f63b8 on the maintainer's arm64 Mac (image tag
 
 spawned: diff-bug, blame-history, prior-review, ripple
 
-- diff-bug #1: a rerun of an older failed PR run joins CI's concurrency group and can cancel a newer push's in-progress run — fix now (script skips the rerun unless the run is still the newest CI run on its branch)
+- diff-bug #1: a rerun of an older failed PR run joins CI's concurrency group and can cancel a newer push's in-progress run — fix now (script skips the rerun unless the run is still the newest CI run on its branch), fixed 4bd2ec4
 - diff-bug #2: a failed `gh run view --log-failed` makes the rerun job exit non-zero with no rerun — reject, edge: only a GitHub API failure reaches it, outside common use, and the effect is a visible error while the CI run stays red
-- diff-bug #3: the r2u probe counted any non-zero exit (ssh failing, a TLS or CA error) as an outage, so an image fault could print "not an image fault" and the marker — fix now (only curl exits 6, 7, 28 from a probe that SSH ran count)
+- diff-bug #3: the r2u probe counted any non-zero exit (ssh failing, a TLS or CA error) as an outage, so an image fault could print "not an image fault" and the marker — fix now (only curl exits 6, 7, 28 from a probe that SSH ran count), fixed 4bd2ec4
 - diff-bug #4: a mirror failure that stops `docker build` gets no marker — follow-up, parked row "Mark Docker Hub pull outages in CI" (promote when it fails a CI run here; `apt-get update` usually only warns)
 - diff-bug #5: one 10 s probe can miss an intermittent mirror, so no rerun — reject, false as a defect: it errs toward no rerun, the plain FAIL still shows
 - diff-bug #6: a CDN or mirror 5xx gets no marker, and a firewall 403 reads as "not on Posit's CDN yet" — 5xx: follow-up, same parked row; firewall 403: reject, edge: a CDN firewall block on the runner is outside common use, and the effect is a FAIL line whose reason says "can take time to appear", not a pass
-- diff-bug #7: the stub `gh` ignored flags, so a `--log-failed` to `--log` regression passed; the fixture copies the assumed log format — first part fix now (stub answers only the exact calls; a planted `--log` turned 3 cases red); second part reject, dependency behavior: real `gh` output cannot be checked offline
+- diff-bug #7: the stub `gh` ignored flags, so a `--log-failed` to `--log` regression passed; the fixture copies the assumed log format — first part fix now (stub answers only the exact calls; a planted `--log` turned 3 cases red), fixed 4bd2ec4; second part reject, dependency behavior: real `gh` output cannot be checked offline
 - diff-bug #8: the script repeats the workflow `if:` guards — reject, planned change: AC4 has the script decide, and the job `if:` saves a runner
 - diff-bug #9: every passing CI run adds a skipped "CI rerun" run in the Actions tab — reject, planned change: the `workflow_run` trigger AC4 names does this
 - diff-bug #10: unquoted `${SMOKE_BLOCK_HOSTS:-}` is glob-expanded — reject, edge: a test-only variable holding host names, no glob characters in use
@@ -110,4 +110,7 @@ spawned: diff-bug, blame-history, prior-review, ripple
 - prior-review #1: no sign actionlint ran on `ci-rerun.yml` — reject, false: actionlint 1.7.12 ran clean on both workflows (work log and AC4 evidence)
 - prior-review #2: the marker match is not anchored at a line start — reject, edge: only a log line quoting the marker from elsewhere reaches it, and the effect is one extra rerun
 - ripple #1: candidate row "Keep upstream flakes from failing CI" still lists "a rerun rule at the merge step" — reject, planned change: the row ends "started M11", and post-merge hygiene graduates it
-- ripple #2: smoke.sh comment said any outside-site failure prints the marker — fix now (comment names the r2u mirror and Posit's CDN only)
+- ripple #2: smoke.sh comment said any outside-site failure prints the marker — fix now (comment names the r2u mirror and Posit's CDN only), fixed 4bd2ec4
+- Fix-now commit 4bd2ec4 covers diff-bug #1, #3, #7 (first part) and ripple #2.
+- Re-verified at 4bd2ec4: `test/ci-rerun.test.sh` 5 passed, 0 failed (AC4's four cases plus a newer-run case); full smoke 35 passed, 0 failed; `SMOKE_BLOCK_HOSTS=r2u.stat.illinois.edu` run printed the mirror FAIL line and one `UPSTREAM-UNREACHABLE: r2u.stat.illinois.edu` line; a planted run mapping the mirror host to a server with a wrong certificate (curl exit 35) printed the plain "bspm install of uuid failed; tail: …" FAIL and no marker; AC3 grep now lists lines 248 and 692, the same two sites; shellcheck and actionlint clean. The CDN branch is unchanged, so the AC2 runs stand.
+- Open-PR cap: 0 open PRs authored, feature cap 1.
