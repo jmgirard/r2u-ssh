@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-11-07 — M09 archived; host-key row graduated; M06 row pruned; 2 lessons added_
+_Last hygiene check: 2026-11-07 — M10 archived; Positron server smoke row graduated; M07 row pruned; 2 lessons added_
 
 ## Milestones
 
@@ -9,16 +9,14 @@ _Last hygiene check: 2026-11-07 — M09 archived; host-key row graduated; M06 ro
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M10 | Smoke-test the Positron server install | review | — | normal | milestones/M10-positron-server-smoke.md |
+| M10 | Smoke-test the Positron server install | done | — | normal | milestones/archive/M10-positron-server-smoke.md |
 | M09 | Generate SSH host keys at boot | done | — | high | milestones/archive/M09-host-keys-at-boot.md |
 | M08 | Keep user work across compose down | done | — | high | milestones/archive/M08-home-volume.md |
-| M07 | Mount-key smoke tests | done | — | normal | milestones/archive/M07-mount-key-smoke.md |
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->
 - Keep upstream flakes from failing CI: the r2u mirror was unreachable for about half of GitHub-hosted runner jobs on 2026-07-23 (branch diag/mirror-arch-probe, r2u discussion #159), and Docker Hub pulls are anonymous; since M10 the smoke test also reads GitHub's release API and downloads the Positron server from Posit's CDN, and a new Positron release whose server is not yet on the CDN would also turn a run red; options include a bounded retry around the bspm install and a rerun rule at the merge step; a 2026-11-05 plan set leaned to one automatic job rerun plus a plain mirror-failure message, and no Docker Hub change — added 2026-11-05 — M04 review — narrowed 2026-11-05 by M07 (smoke port race fixed)
 - Verify README Windows PowerShell .env recipe on real Windows (M01 AC4 deferred); also the Step 6 `ssh-keygen -R "[127.0.0.1]:2222"` host-key step (added by M09) — added 2026-07-17 — M01 AC4
-- Smoke-test the Positron server install: DESIGN.md names Positron installing and running its remote server as the contract, but `test/smoke.sh` never starts the Positron server (it checks SSH, keys, bspm, git, host keys, and the compose home and host-key volumes), so a missing library would first show up for a user; a check would download and start the server headless over SSH — added 2026-11-05 — image-gap check — started M10
 - [low] Keep CLAUDE.md out of the build context: the M05 context probe listed `CLAUDE.md` in the copied context because `.dockerignore` does not exclude it; the Dockerfile copies only `boot-sshd.sh`, so the image is unaffected — added 2026-11-05 — M05 T2
 - [low] Rename the stale references ignore entry: `cairn_validate` WARNs that the `.gitignore` entry `cairn/references/pdf/` is superseded by `cairn/references/sources/`; fix by `/cairn-init` repair; low because the warning is advisory and no PDF shelf exists — added 2026-11-05 — M05 review
 - [low] Check locale and time zone over SSH: the image sets `LANG`/`LC_ALL` as container env and sshd has `AcceptEnv LANG LC_*`, but whether an SSH session gets a UTF-8 locale and a sane time zone when the client sends none is unchecked — added 2026-11-05 — image-gap check
