@@ -1,7 +1,7 @@
 # Roadmap
 
 _The only authority on milestone status. Grouped by status, not ID._
-_Last hygiene check: 2026-11-06 — M08 archived; compose-down row graduated, Positron smoke row narrowed; M05 row pruned_
+_Last hygiene check: 2026-11-07 — M09 archived; host-key row graduated; M06 row pruned; 2 lessons added_
 
 ## Milestones
 
@@ -9,14 +9,12 @@ _Last hygiene check: 2026-11-06 — M08 archived; compose-down row graduated, Po
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M09 | Generate SSH host keys at boot | review | — | high | milestones/M09-host-keys-at-boot.md |
+| M09 | Generate SSH host keys at boot | done | — | high | milestones/archive/M09-host-keys-at-boot.md |
 | M08 | Keep user work across compose down | done | — | high | milestones/archive/M08-home-volume.md |
 | M07 | Mount-key smoke tests | done | — | normal | milestones/archive/M07-mount-key-smoke.md |
-| M06 | Add less as git's pager | done | — | low | milestones/archive/M06-less-pager.md |
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->
-- Generate SSH host keys at boot: the openssh-server install writes `/etc/ssh/ssh_host_*_key` at build time, so every container of one image shares them, the GHCR image ships the same private host keys to every puller (against IP2's wording), and a rebuild that redoes that layer changes them, so ssh and Positron refuse with a host-identification-changed warning; option: delete them in the Dockerfile and create them in `boot-sshd.sh` on a volume so they stay stable; may fit `/hotfix` if judged an IP2 bug — added 2026-11-05 — image-gap check — started M09
 - Keep upstream flakes from failing CI: the r2u mirror was unreachable for about half of GitHub-hosted runner jobs on 2026-07-23 (branch diag/mirror-arch-probe, r2u discussion #159), and Docker Hub pulls are anonymous; options include a bounded retry around the bspm install and a rerun rule at the merge step; a 2026-11-05 plan set leaned to one automatic job rerun plus a plain mirror-failure message, and no Docker Hub change — added 2026-11-05 — M04 review — narrowed 2026-11-05 by M07 (smoke port race fixed)
 - Verify README Windows PowerShell .env recipe on real Windows (M01 AC4 deferred); also the Step 6 `ssh-keygen -R "[127.0.0.1]:2222"` host-key step (added by M09) — added 2026-07-17 — M01 AC4
 - Smoke-test the Positron server install: DESIGN.md names Positron installing and running its remote server as the contract, but `test/smoke.sh` never starts the Positron server (it checks SSH, keys, bspm, git, host keys, and the compose home and host-key volumes), so a missing library would first show up for a user; a check would download and start the server headless over SSH — added 2026-11-05 — image-gap check
