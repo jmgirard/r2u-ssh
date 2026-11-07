@@ -9,7 +9,7 @@ _Last hygiene check: 2026-11-06 — M08 archived; compose-down row graduated, Po
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M09 | Generate SSH host keys at boot | review | — | high | milestones/M09-host-keys-at-boot.md |
+| M09 | Generate SSH host keys at boot | in-progress | — | high | milestones/M09-host-keys-at-boot.md |
 | M08 | Keep user work across compose down | done | — | high | milestones/archive/M08-home-volume.md |
 | M07 | Mount-key smoke tests | done | — | normal | milestones/archive/M07-mount-key-smoke.md |
 | M06 | Add less as git's pager | done | — | low | milestones/archive/M06-less-pager.md |
