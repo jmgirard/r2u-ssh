@@ -92,7 +92,7 @@ smoke SSH ignore the user's config").
 - [x] T3: In `docker-compose.yml`, add a named volume `ssh-host-keys` mounted
       at `/etc/ssh/host_keys`, beside `home`. Check with
       `docker compose -f docker-compose.yml --env-file /dev/null config`.
-- [ ] T4: Add `test/smoke.sh` checks for AC1, AC2, and AC3, each failing on a
+- [x] T4: Add `test/smoke.sh` checks for AC1, AC2, and AC3, each failing on a
       violation, and list them in the header. AC1: save the image to `$WORK`,
       count the layers the manifest (`manifest.json` or OCI `index.json`)
       names, list each layer whatever its compression, FAIL if a listing fails
@@ -108,7 +108,7 @@ smoke SSH ignore the user's config").
       on a temporary copy of `docker-compose.yml` without the host-key volume.
       Run the AC1 check on the Mac's local image store and in CI, since the
       `docker save` format differs between them.
-- [ ] T5: README Step 6 (AC4), the CHANGELOG entry (AC5), and DESIGN.md (the
+- [x] T5: README Step 6 (AC4), the CHANGELOG entry (AC5), and DESIGN.md (the
       "image provides" list, Function Families stages 3-4, and the
       Architecture State bullet). Before writing the README text, observe on
       macOS the warning ssh prints after `down -v` and `up -d`, and that
@@ -136,6 +136,7 @@ smoke SSH ignore the user's config").
 - 2026-11-06: T3 done: `ssh-host-keys` named volume at `/etc/ssh/host_keys` beside `home`; `docker compose config` lists both volumes, the new one as `r2u-ssh_ssh-host-keys`.
 - 2026-11-06: checkpoint (T4 and T5 not ticked): smoke tests 12-14 written, shellcheck clean, branch run 30 passed 0 failed on the Mac (containerd store, 15 of 15 layers listed); red runs on `origin/main` and on planted defects still running; README Step 6, CHANGELOG Security entry, and DESIGN.md written; on macOS with a private known_hosts, `down -v` then `up` gave "REMOTE HOST IDENTIFICATION HAS CHANGED" and exit 255, and `ssh-keygen -R "[127.0.0.1]:2299"` cleared it.
 - 2026-11-06: red runs (branch smoke.sh copied in): `origin/main` 23 passed 7 failed (layer hits, all three key types shared, no host-key folder, key changed after the rebuild, no host-key volume; down/up and force-recreate pass there because the key is baked); planted tree (later `RUN rm`, ed25519-only boot, compose without the volume) 23 passed 7 failed (layer hits; no ecdsa or rsa key; key changed after down/up, force-recreate, and rebuild; no host-key volume); the layer FAIL line now prints all hits on one line.
+- 2026-11-06: T4 and T5 done: rerun after the last smoke.sh edits, shellcheck and hadolint clean, branch 30 passed 0 failed, main image's layer FAIL line names all three keys; the AC1 check on the CI runner's image store runs on review's push (not yet observed).
 
 ## Decisions
 
