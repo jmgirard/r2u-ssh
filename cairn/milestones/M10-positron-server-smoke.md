@@ -24,9 +24,9 @@ Make `test/smoke.sh` download, unpack, and start the Positron remote server over
 
 ## Acceptance criteria
 
-- [ ] AC1: `test/smoke.sh` has a check that, over SSH as `rocker` on a keyed container of the image it built, downloads the Positron server for the container's architecture from the address Positron's SSH extension uses by default (`https://cdn.posit.co/positron/releases/reh/<arch-long>/positron-reh-linux-<arch>-<version>.tar.gz`), unpacks it under `~/.positron-server/bin/`, and starts `positron-server --start-server --host=127.0.0.1 --port=0`. The check prints PASS only when the server log shows `Extension host agent listening on <port>` and an HTTP request to that port from inside the container gets an HTTP status line.
-- [ ] AC2: The check tests the Positron version that GitHub reports as the latest release of `posit-dev/positron` at run time, or the version in the `POSITRON_VERSION` environment variable when it is set, and its PASS line names the version and the architecture tested.
-- [ ] AC3: Each of the check's steps (version lookup, download and unpack, server start, HTTP probe) tests its own result and, if the test fails, prints one FAIL line naming that step through the harness's `bad` helper, so `test/smoke.sh` exits non-zero.
+- [x] AC1: `test/smoke.sh` has a check that, over SSH as `rocker` on a keyed container of the image it built, downloads the Positron server for the container's architecture from the address Positron's SSH extension uses by default (`https://cdn.posit.co/positron/releases/reh/<arch-long>/positron-reh-linux-<arch>-<version>.tar.gz`), unpacks it under `~/.positron-server/bin/`, and starts `positron-server --start-server --host=127.0.0.1 --port=0`. The check prints PASS only when the server log shows `Extension host agent listening on <port>` and an HTTP request to that port from inside the container gets an HTTP status line.
+- [x] AC2: The check tests the Positron version that GitHub reports as the latest release of `posit-dev/positron` at run time, or the version in the `POSITRON_VERSION` environment variable when it is set, and its PASS line names the version and the architecture tested.
+- [x] AC3: Each of the check's steps (version lookup, download and unpack, server start, HTTP probe) tests its own result and, if the test fails, prints one FAIL line naming that step through the harness's `bad` helper, so `test/smoke.sh` exits non-zero.
 - [ ] AC4: In CI, the `Build image and run smoke test` step gives the workflow's `GITHUB_TOKEN` to the version lookup, and the new check passes in that job.
 
 ## Coverage
@@ -77,16 +77,16 @@ spawned: diff-bug, blame-history, prior-review, ripple
 Findings and dispositions:
 
 - diff-bug #1: AC4 has no evidence and the amd64 path never ran — reject (false as a defect): AC4's CI half is verified from the PR's CI run, which the merge wait requires green before any merge.
-- diff-bug #2: wget has no total time limit, so a slow transfer hangs until the job timeout with no FAIL line — fix now.
-- diff-bug #3: the host lookup curl has no `--max-time` — fix now.
-- diff-bug #4: the token is on curl's command line, visible to `ps` on the host — fix now (header read from stdin).
-- diff-bug #5: a malformed `POSITRON_VERSION` reports "version lookup failed" with an empty tail — fix now (message names the variable).
-- diff-bug #6: the source comment says wget and start flags are copied, but `--continue` and `--enable-remote-auto-shutdown` are dropped and the folder is keyed by version — fix now (comment and source note).
-- diff-bug #7: `kill` may leave node children, and the start-failure path never kills the server — fix now for the failure path; the rest reject (false as a defect): the container is removed at exit.
+- diff-bug #2: wget has no total time limit, so a slow transfer hangs until the job timeout with no FAIL line — fix now, fixed 2978fff.
+- diff-bug #3: the host lookup curl has no `--max-time` — fix now, fixed 2978fff.
+- diff-bug #4: the token is on curl's command line, visible to `ps` on the host — fix now (header read from stdin), fixed 2978fff.
+- diff-bug #5: a malformed `POSITRON_VERSION` reports "version lookup failed" with an empty tail — fix now (message names the variable), fixed 2978fff.
+- diff-bug #6: the source comment says wget and start flags are copied, but `--continue` and `--enable-remote-auto-shutdown` are dropped and the folder is keyed by version — fix now (comment and source note), fixed 2978fff.
+- diff-bug #7: `kill` may leave node children, and the start-failure path never kills the server — fix now for the failure path, fixed 2978fff; the rest reject (false as a defect): the container is removed at exit.
 - diff-bug #8: the port is taken as the last word of the log line — reject (false): the grep requires digits after "on", and the observed line ends at the port (`Extension host agent listening on 36015`).
 - diff-bug #9: the probe accepts any status and an `http_proxy` could answer — reject (false): the probe asks only for an HTTP status line from the port the server's own log names (AC1), and the check's containers get no proxy variables (only `AUTHORIZED_KEYS_B64`).
-- diff-bug #10: the first grep can run before the log file exists, adding a "No such file" line — fix now (stderr dropped).
-- diff-bug #11: the token-file write is unchecked — fix now (reported as server start with its own message).
+- diff-bug #10: the first grep can run before the log file exists, adding a "No such file" line — fix now (stderr dropped), fixed 2978fff.
+- diff-bug #11: the token-file write is unchecked — fix now (reported as server start with its own message), fixed 2978fff.
 - diff-bug #12: the remote script is heredoc data, so CI's shellcheck never reads it — reject (style): linter coverage; this pass runs shellcheck on the extracted script by hand.
 - diff-bug #13: `read -r -d ''` without `IFS=` trims the script's outer whitespace — reject (style): harmless for this content.
 - diff-bug #14: bash 3.2 coverage not shown — reject (false): `/usr/bin/env bash` on the host is GNU bash 3.2.57 (checked 2026-11-06 in implement).
@@ -108,5 +108,16 @@ Findings and dispositions:
 - prior-review #5: DESIGN.md wording widths — reject (style).
 - prior-review #6: the server stays up after a start failure — fixed by diff-bug #7.
 - ripple #1: the M10 candidate row still says smoke.sh never starts the Positron server — reject (false as a defect): post-merge hygiene graduates that row.
-- ripple #2: the "Keep upstream flakes from failing CI" row names only the r2u mirror and Docker Hub — fix now (row names GitHub's API and Posit's CDN).
+- ripple #2: the "Keep upstream flakes from failing CI" row names only the r2u mirror and Docker Hub — fix now (row names GitHub's API and Posit's CDN), fixed 2978fff.
+- review checks on 2978fff: `bash -n` clean; shellcheck v0.11.0 clean on smoke.sh, boot-sshd.sh, and the 49-line remote script extracted from the heredoc; the lookup line returned tag 2026.11.0-308 with no token under bash, and a bad token got curl 401, so the header from stdin is sent. A local run with a real token was blocked by the session's permission classifier, so the token path is first shown in CI.
+
+Evidence (fresh, branch head 2978fff, arm64 host, bash 3.2.57):
+
+- AC1: full `test/smoke.sh r2u-ssh:m10-review` run, exit 0, 35 passed and 0 failed; test 16 printed `PASS: Positron server 2026.11.0-308 (linux-arm64) downloads, starts, and answers on port 43889 (HTTP/1.1 403 Forbidden)`. The code (smoke.sh test 16) uses the CDN URL `https://cdn.posit.co/positron/releases/reh/$L/positron-reh-linux-$A-$V.tar.gz`, unpacks under `$HOME/.positron-server/bin/$V`, starts `bin/positron-server --start-server --host=127.0.0.1 --port=0`, and prints OK only after the listening line and an HTTP status line.
+- AC2: with no `POSITRON_VERSION`, the PASS named 2026.11.0-308, the tag `releases/latest` returned at run time; with `POSITRON_VERSION=2026.10.2-3` (plant harness, test 16 unedited), the PASS named `2026.10.2-3 (linux-arm64)`.
+- AC3: each step's own test reports one `bad` line naming it and the run exits 1 (plant harness: detached worktrees of 2978fff, smoke.sh trimmed to header, build, key prep, test 16, summary): lookup URL edited to `releases/no-such-release` → `version lookup failed` (curl 404); `POSITRON_VERSION=latest` → `version lookup failed (got 'latest'); tail: POSITRON_VERSION is set, so no lookup ran`; `POSITRON_VERSION=2099.01.0-1` → `download and unpack` (wget ERROR 403); Dockerfile line removing libstdc++.so.6 → `server start` (node cannot load libstdc++.so.6); probe edited to port 1 → `HTTP probe` (curl 7).
+- AC4 (config half): `.github/workflows/ci.yml` gives the `Build image and run smoke test` step `GITHUB_TOKEN: ${{ github.token }}`, and smoke.sh sends it only as the lookup's `Authorization` header; actionlint 1.7.12 clean. The CI half (test 16 passing in that job on amd64) waits for the PR's CI run at the merge step; this box is ticked only after that run is green.
+
+Consistency gate: `cairn_validate` all checks passed (1 advisory: the stale `cairn/references/pdf/` ignore entry, an existing candidate row); `cairn_impact` not run, since no principle changed; hadolint v2.15.1 clean; `docker build` succeeds (each smoke run's first PASS); base image pinned by explicit tag `rocker/r2u:24.04`; Dockerfile, compose file, README, and changelog unchanged, so no new secrets, `.dockerignore` present, and no changelog entry owed (no user-visible change).
+
 - ripple #3: DESIGN.md line width — reject (style).
