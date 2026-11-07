@@ -32,4 +32,8 @@ jobs:
         run: docker run --rm -v "$PWD:/mnt:ro" koalaman/shellcheck:v0.11.0 /mnt/boot-sshd.sh /mnt/test/smoke.sh
 
       - name: Build image and run smoke test
+        env:
+          # Authenticates the smoke test's Positron release lookup, so the
+          # shared runner IP does not hit GitHub's anonymous rate limit.
+          GITHUB_TOKEN: ${{ github.token }}
         run: test/smoke.sh

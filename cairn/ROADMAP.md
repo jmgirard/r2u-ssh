@@ -9,14 +9,14 @@ _Last hygiene check: 2026-11-07 — M09 archived; host-key row graduated; M06 ro
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M10 | Smoke-test the Positron server install | planned | — | normal | milestones/M10-positron-server-smoke.md |
+| M10 | Smoke-test the Positron server install | review | — | normal | milestones/M10-positron-server-smoke.md |
 | M09 | Generate SSH host keys at boot | done | — | high | milestones/archive/M09-host-keys-at-boot.md |
 | M08 | Keep user work across compose down | done | — | high | milestones/archive/M08-home-volume.md |
 | M07 | Mount-key smoke tests | done | — | normal | milestones/archive/M07-mount-key-smoke.md |
 
 ## Candidates
 <!-- unnumbered ideas; one line each: idea — added YYYY-MM-DD — links -->
-- Keep upstream flakes from failing CI: the r2u mirror was unreachable for about half of GitHub-hosted runner jobs on 2026-07-23 (branch diag/mirror-arch-probe, r2u discussion #159), and Docker Hub pulls are anonymous; options include a bounded retry around the bspm install and a rerun rule at the merge step; a 2026-11-05 plan set leaned to one automatic job rerun plus a plain mirror-failure message, and no Docker Hub change — added 2026-11-05 — M04 review — narrowed 2026-11-05 by M07 (smoke port race fixed)
+- Keep upstream flakes from failing CI: the r2u mirror was unreachable for about half of GitHub-hosted runner jobs on 2026-07-23 (branch diag/mirror-arch-probe, r2u discussion #159), and Docker Hub pulls are anonymous; since M10 the smoke test also reads GitHub's release API and downloads the Positron server from Posit's CDN, and a new Positron release whose server is not yet on the CDN would also turn a run red; options include a bounded retry around the bspm install and a rerun rule at the merge step; a 2026-11-05 plan set leaned to one automatic job rerun plus a plain mirror-failure message, and no Docker Hub change — added 2026-11-05 — M04 review — narrowed 2026-11-05 by M07 (smoke port race fixed)
 - Verify README Windows PowerShell .env recipe on real Windows (M01 AC4 deferred); also the Step 6 `ssh-keygen -R "[127.0.0.1]:2222"` host-key step (added by M09) — added 2026-07-17 — M01 AC4
 - Smoke-test the Positron server install: DESIGN.md names Positron installing and running its remote server as the contract, but `test/smoke.sh` never starts the Positron server (it checks SSH, keys, bspm, git, host keys, and the compose home and host-key volumes), so a missing library would first show up for a user; a check would download and start the server headless over SSH — added 2026-11-05 — image-gap check — started M10
 - [low] Keep CLAUDE.md out of the build context: the M05 context probe listed `CLAUDE.md` in the copied context because `.dockerignore` does not exclude it; the Dockerfile copies only `boot-sshd.sh`, so the image is unaffected — added 2026-11-05 — M05 T2
