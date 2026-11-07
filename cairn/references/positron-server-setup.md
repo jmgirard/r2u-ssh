@@ -28,4 +28,4 @@ Extraction: verified 2026-11-06 against the source — observed 2026-11-06.
 
 ## Open questions
 
-- Test 16 leaves out `--enable-remote-auto-shutdown`, because the container is removed after the run. Whether the flag matters for a headless start is not known — observed 2026-11-06.
+- Test 16 differs from the source in four ways. It runs wget without `--continue` and under a 900 s `timeout`. It starts the server without `--enable-remote-auto-shutdown`, because the container is removed after the run. It keys the folder by version (`bin/<version>`), not by commit. Whether the left-out flag matters for a headless start is not known — observed 2026-11-06.

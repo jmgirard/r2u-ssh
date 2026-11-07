@@ -554,20 +554,24 @@ if [[ $VOL_OURS -eq 1 ]]; then
 fi
 
 # --- Test 16: Positron server installs and starts over SSH (IP3) -----------
-# The remote steps copy Positron's SSH extension: posit-dev/positron
+# The remote steps follow Positron's SSH extension: posit-dev/positron
 # extensions/open-remote-ssh/src/serverSetup.ts at df65447 (download URL
-# template, arch map, wget flags, unpack, start flags, ready line).
+# template, arch map, unpack, ready line). Differences: wget runs without
+# --continue and under a 900 s limit, the server starts without
+# --enable-remote-auto-shutdown, and the folder is bin/<version>, not
+# bin/<commit>.
 echo "== Positron server (download, unpack, start over SSH) =="
 POSITRON_RELEASE_API="https://api.github.com/repos/posit-dev/positron/releases/latest"
 POS_VER="${POSITRON_VERSION:-}"
 POS_LOOKUP=""
-if [[ -z "$POS_VER" ]]; then
-  POS_AUTH=()
-  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-    POS_AUTH=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
-  fi
-  POS_LOOKUP="$(curl -fsSL --retry 3 --connect-timeout 10 ${POS_AUTH[@]+"${POS_AUTH[@]}"} \
-    "$POSITRON_RELEASE_API" 2>&1 || true)"
+if [[ -n "$POS_VER" ]]; then
+  POS_LOOKUP="POSITRON_VERSION is set, so no lookup ran"
+else
+  # The token goes to curl on stdin (-H @-), so it never shows in `ps`.
+  POS_LOOKUP="$( { if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+                     printf 'Authorization: Bearer %s\n' "$GITHUB_TOKEN"; fi; } \
+    | curl -fsSL --retry 3 --connect-timeout 10 --max-time 60 -H @- \
+        "$POSITRON_RELEASE_API" 2>&1 || true)"
   if [[ "$POS_LOOKUP" =~ \"tag_name\":\ *\"([^\"]+)\" ]]; then
     POS_VER="${BASH_REMATCH[1]}"
   fi
@@ -599,15 +603,17 @@ if ! mkdir -p "$S" || ! cd "$S"; then
   echo "STEP download and unpack: cannot make $S"; exit 1
 fi
 URL="https://cdn.posit.co/positron/releases/reh/$L/positron-reh-linux-$A-$V.tar.gz"
-if ! wget --tries=3 --timeout=10 --no-verbose -O server.tar.gz "$URL" 2>wget.err; then
-  echo "STEP download and unpack: wget $URL failed: $(tail -c 160 wget.err | tr '\n' ' ')"; exit 1
+if ! timeout 900 wget --tries=3 --timeout=10 --no-verbose -O server.tar.gz "$URL" 2>wget.err; then
+  echo "STEP download and unpack: wget $URL failed or passed 900 s: $(tail -c 160 wget.err | tr '\n' ' ')"; exit 1
 fi
 if ! tar -xf server.tar.gz --strip-components 1 2>tar.err || [[ ! -x bin/positron-server ]]; then
   echo "STEP download and unpack: no bin/positron-server after tar: $(tail -c 160 tar.err | tr '\n' ' ')"; exit 1
 fi
 rm -f server.tar.gz
 T="$D/.smoke.token"
-(umask 077 && echo "smoke-token" > "$T")
+if ! (umask 077 && echo "smoke-token" > "$T"); then
+  echo "STEP server start: cannot write the token file $T"; exit 1
+fi
 LOG="$D/.smoke.log"
 bin/positron-server --start-server --host=127.0.0.1 --port=0 \
   --connection-token-file "$T" --server-data-dir "$D" \
@@ -615,12 +621,13 @@ bin/positron-server --start-server --host=127.0.0.1 --port=0 \
 PID=$!
 P=""
 for _ in $(seq 1 60); do
-  LINE="$(grep -m 1 -E 'Extension host agent listening on [0-9]+' "$LOG" || true)"
+  LINE="$(grep -m 1 -E 'Extension host agent listening on [0-9]+' "$LOG" 2>/dev/null || true)"
   if [[ -n "$LINE" ]]; then P="${LINE##* }"; break; fi
   kill -0 "$PID" 2>/dev/null || break
   sleep 0.5
 done
 if [[ ! "$P" =~ ^[0-9]+$ ]]; then
+  kill "$PID" 2>/dev/null || true
   echo "STEP server start: no 'Extension host agent listening on' line; log tail: $(tail -c 200 "$LOG" | tr '\n' ' ')"; exit 1
 fi
 R="$(curl -sS -i --max-time 10 "http://127.0.0.1:$P/" 2>&1 || true)"
