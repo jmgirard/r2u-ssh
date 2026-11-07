@@ -95,8 +95,8 @@ if docker save "$IMAGE" -o "$WORK/image.tar" && tar -xf "$WORK/image.tar" -C "$S
   for layer in "${LAYERS[@]}"; do
     if NAMES="$(tar -tf "$SAVE/$layer" 2>/dev/null)"; then
       LISTED=$((LISTED + 1))
-      HIT="$(awk -F/ '$NF ~ /^ssh_host_.*_key$/' <<<"$NAMES")"
-      [[ -n "$HIT" ]] && HOSTKEY_HITS+="$HIT "
+      HIT="$(awk -F/ '$NF ~ /^ssh_host_.*_key$/ { printf "%s ", $0 }' <<<"$NAMES")"
+      HOSTKEY_HITS+="$HIT"
     else
       LIST_FAILED+=("$layer")
     fi
