@@ -1,6 +1,6 @@
 # M09: Generate SSH host keys at boot
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
@@ -65,8 +65,9 @@ smoke SSH ignore the user's config").
       start when none are present, which with `docker-compose.yml` happens
       only when the host-key volume is new; that the volume keeps them the
       same across `down`, `up`, and rebuilds; and that a user who connected
-      before sees one changed-host-key warning at the first connection after
-      updating, pointing to the README step that clears it.
+      before with the README's SSH setup gets a changed-host-key warning and
+      failed connections after updating until the old key is removed,
+      pointing to the README step that shows the command to remove it.
 
 ## Coverage
 
@@ -145,6 +146,7 @@ smoke SSH ignore the user's config").
 - 2026-11-06: test 15 red run against c4e9076 (boot without the key check): 32 passed 1 failed, "a damaged host key did not stop the boot (state 'true 0')", sshd having logged the key as unusable and kept running; the empty-key check passes there, as that code already replaced empty files.
 - 2026-11-06: re-audit: AC5 (full) — proposed clause "connections after updating fail with a changed-host-key warning until the old key is removed, pointing to the README step that removes it": the README step shows a command and removes nothing; the failure holds only with default host-key checking (the README's SSH config); README "happens once after you update" can read as one warning; the current entry would satisfy it. Fixed: pointer now "the README step that shows the command to remove it", clause scoped to "with the README's SSH setup", CHANGELOG and README reworded to match.
 - 2026-11-06: re-audit: AC5 (full) — re-entry on the fixed clause "a user who connected before with the README's SSH setup gets a changed-host-key warning and failed connections after updating until the old key is removed, pointing to the README step that shows the command to remove it": the qualifier can be read as text the entry must hold or as the claim's limit (the entry now holds it, so it passes both); "only when the host-key volume is new" (unamended clause) misses the empty-key-file case test 15 covers, outside documented use; "failed connections" can be broken by a global ssh config (`StrictHostKeyChecking no`), and Positron and Windows are unrun. Second re-audit line on AC5: further change is the user's (repeated review-failure stop).
+- 2026-11-06: amendment return: AC5 — "and that a user who connected before with the README's SSH setup gets a changed-host-key warning and failed connections after updating until the old key is removed, pointing to the README step that shows the command to remove it." Wording accepted by the user at the stop chip, edge cases left as they are; the delivered changelog text did not change for it. Status set to review.
 
 ## Decisions
 
