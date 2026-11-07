@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Boot script for r2u-ssh: install the runtime-supplied authorized key,
-# prepare the SSH and Positron directories, then exec sshd.
+# prepare the SSH and Positron directories, create any missing SSH host key,
+# then exec sshd.
 set -euo pipefail
 
 USER_NAME="rocker"
@@ -46,7 +47,9 @@ chmod 600 "$KEYDST"
 
 # Host keys: the image ships none (IP2). Create each missing key at start and
 # keep a present one, so a kept /etc/ssh/host_keys volume keeps the host key
-# that clients already trust. A failed ssh-keygen ends the boot (set -e).
+# that clients already trust. A failed ssh-keygen ends the boot (set -e). A
+# present key that ssh-keygen cannot read also ends the boot (GP5), because
+# sshd would skip it and start with the other keys.
 HOSTKEY_DIR="/etc/ssh/host_keys"
 install -d -m 700 -o root -g root "$HOSTKEY_DIR"
 for type in ed25519 ecdsa rsa; do
@@ -55,6 +58,13 @@ for type in ed25519 ecdsa rsa; do
     rm -f "$hostkey" "$hostkey.pub"
     echo "Creating SSH host key ($type)..."
     ssh-keygen -q -t "$type" -N '' -f "$hostkey"
+  fi
+  chown root:root "$hostkey"
+  chmod 600 "$hostkey"
+  if ! ssh-keygen -y -f "$hostkey" >/dev/null 2>&1; then
+    echo "ERROR: the SSH host key $hostkey is damaged." >&2
+    echo "       delete it (or the host-key volume) so the next start makes a new one." >&2
+    exit 1
   fi
 done
 

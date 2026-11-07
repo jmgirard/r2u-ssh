@@ -27,6 +27,8 @@
 #  14. With docker-compose.yml, the ed25519 host key stays the same across
 #      `down` and `up`, a force-recreate, and a recreate onto a second build;
 #      `down -v` removes the host-key volume.
+#  15. On a kept host-key folder, an empty key file is replaced at boot, and a
+#      damaged key stops the boot with a clear error.
 #
 # Usage: test/smoke.sh [image-tag]   (default tag: r2u-ssh:smoke — built here)
 set -euo pipefail
@@ -47,6 +49,13 @@ cleanup() {
   # Test 14 builds a second image tag; remove it.
   if [[ -n "${IMAGE2:-}" ]]; then
     docker image rm "$IMAGE2" >/dev/null 2>&1 || true
+  fi
+  # Test 15 makes a host-key volume of its own. Its containers must go first.
+  if [[ -n "${HKV:-}" ]]; then
+    for c in "${HKV_CONTAINERS[@]:-}"; do
+      [[ -n "$c" ]] && docker rm -f "$c" >/dev/null 2>&1 || true
+    done
+    docker volume rm "$HKV" >/dev/null 2>&1 || true
   fi
   for c in "${CONTAINERS[@]:-}"; do
     [[ -n "$c" ]] && docker rm -f "$c" >/dev/null 2>&1 || true
@@ -83,8 +92,7 @@ ok "image builds"
 echo "== no file named ssh_host_*_key in any image layer =="
 SAVE="$WORK/save"
 mkdir -p "$SAVE"
-if docker save "$IMAGE" -o "$WORK/image.tar" && tar -xf "$WORK/image.tar" -C "$SAVE"; then
-  rm -f "$WORK/image.tar"
+if docker save "$IMAGE" | tar -xf - -C "$SAVE"; then
   LAYERS=()
   while IFS= read -r layer; do
     [[ -n "$layer" ]] && LAYERS+=("$layer")
@@ -92,7 +100,7 @@ if docker save "$IMAGE" -o "$WORK/image.tar" && tar -xf "$WORK/image.tar" -C "$S
   LISTED=0
   LIST_FAILED=()
   HOSTKEY_HITS=""
-  for layer in "${LAYERS[@]}"; do
+  for layer in ${LAYERS[@]+"${LAYERS[@]}"}; do   # bash 3.2 + set -u: empty-safe
     if NAMES="$(tar -tf "$SAVE/$layer" 2>/dev/null)"; then
       LISTED=$((LISTED + 1))
       HIT="$(awk -F/ '$NF ~ /^ssh_host_.*_key$/ { printf "%s ", $0 }' <<<"$NAMES")"
@@ -274,11 +282,59 @@ for type in ed25519 ecdsa rsa; do
     ok "two containers of one image have different $type host keys"
   fi
 done
-HKMODE="$(docker exec "$CID" stat -c '%U:%G %a' /etc/ssh/host_keys 2>&1 || true)"
-if [[ "$HKMODE" == "root:root 700" ]]; then
-  ok "/etc/ssh/host_keys is root:root 700"
+for c in "$CID" "$CID2"; do
+  HKMODE="$(docker exec "$c" stat -c '%U:%G %a' /etc/ssh/host_keys 2>&1 || true)"
+  if [[ "$HKMODE" == "root:root 700" ]]; then
+    ok "/etc/ssh/host_keys is root:root 700 in container ${c:0:12}"
+  else
+    bad "/etc/ssh/host_keys is '$HKMODE' in container ${c:0:12}, expected root:root 700"
+  fi
+done
+
+# --- Test 15: a kept host-key folder with a bad key file --------------------
+# A volume of our own stands in for a kept ssh-host-keys volume. A helper
+# container writes the bad file; then a keyed container boots on the volume.
+echo "== kept host-key folder (empty key replaced; damaged key stops boot) =="
+HKV="r2u-ssh-smoke-hostkeys-$$"
+HKV_CONTAINERS=()
+put_hostkey() {  # put_hostkey <content>   (writes the volume's ed25519 key file)
+  docker run --rm -v "$HKV:/k" --entrypoint sh "$IMAGE" \
+    -c 'rm -f /k/*; printf "%s" "$1" > /k/ssh_host_ed25519_key' sh "$1" >/dev/null 2>&1
+}
+boot_on_hkv() {  # boot_on_hkv   (starts a keyed container on the volume; prints its id)
+  docker run -d -p 127.0.0.1::22 -v "$HKV:/etc/ssh/host_keys" \
+    -e "AUTHORIZED_KEYS_B64=${B64}" "$IMAGE"
+}
+if docker volume create "$HKV" >/dev/null && put_hostkey ""; then
+  CID5="$(boot_on_hkv)"
+  HKV_CONTAINERS+=("$CID5")
+  PORT5="$(host_port "$CID5")"
+  wait_for_ssh "$PORT5" || true   # give sshd time to start; the check below decides
+  if [[ "$(host_key "$PORT5" ed25519)" == ssh-ed25519* ]]; then
+    ok "an empty host key file is replaced at boot"
+  else
+    bad "no ed25519 host key after booting on an empty key file; logs: $(docker logs "$CID5" 2>&1 | tail -c 200)"
+  fi
+  docker rm -f "$CID5" >/dev/null 2>&1 || true
 else
-  bad "/etc/ssh/host_keys is '$HKMODE', expected root:root 700"
+  bad "could not prepare the host-key volume $HKV with an empty key file"
+fi
+if put_hostkey "not a private key"; then
+  CID6="$(boot_on_hkv)"
+  HKV_CONTAINERS+=("$CID6")
+  for _ in $(seq 1 15); do   # a fixed boot exits at once; never wait on a running sshd
+    [[ "$(docker inspect -f '{{.State.Running}}' "$CID6" 2>/dev/null || true)" == "false" ]] && break
+    sleep 1
+  done
+  STATE6="$(docker inspect -f '{{.State.Running}} {{.State.ExitCode}}' "$CID6" 2>&1 || true)"
+  LOGS6="$(docker logs "$CID6" 2>&1 || true)"
+  if [[ "$STATE6" == "false "[1-9]* ]] && grep -q "host key .* is damaged" <<<"$LOGS6"; then
+    ok "a damaged host key stops the boot with a clear error"
+  else
+    bad "a damaged host key did not stop the boot (state '$STATE6'); logs: $(tail -c 200 <<<"$LOGS6")"
+  fi
+else
+  bad "could not write a damaged key file into $HKV"
 fi
 
 # --- Test 8: mounted key only ----------------------------------------------
@@ -319,7 +375,7 @@ else
   bad "mounted key A did not connect when AUTHORIZED_KEYS_B64 was also set"
 fi
 
-# --- Tests 10 & 11: compose home volume ------------------------------------
+# --- Tests 10, 11 & 14: compose volumes ------------------------------------
 # Run the repo's docker-compose.yml under a project name of our own, so a
 # user's own r2u-ssh project and its home volume are never touched. The
 # override changes only the image (the tag built above, never pulled or
@@ -420,7 +476,7 @@ elif VOL_OURS=1 && compose_up "$B64" && wait_for_ssh "$CPORT"; then
       # Test 14, rebuild: a second build of this tree, with a changed build
       # arg, replaces the container on the same volumes. Docker's ARG cache
       # rule reruns every RUN after the ARG; this test does not check that.
-      IMAGE2="${IMAGE}-rebuild"
+      IMAGE2="r2u-ssh-smoke-rebuild:$$"   # a tag of our own, never the caller's
       if docker build -q --build-arg BASE_DIGEST=smoke-rebuild -t "$IMAGE2" "$REPO_ROOT" >/dev/null; then
         cat > "$WORK/compose.rebuild.yml" <<EOF
 services:

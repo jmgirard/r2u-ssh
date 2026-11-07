@@ -75,7 +75,7 @@ RUN printf "%s\n" \
     > /etc/ssh/sshd_config.d/zz-container.conf
 
 # ------------------------------------------------------------
-# 5. Boot script: installs the key, prepares dirs, runs sshd
+# 5. Boot script: installs the key, prepares dirs, makes host keys, runs sshd
 # ------------------------------------------------------------
 
 COPY --chmod=0755 boot-sshd.sh /usr/local/bin/boot-sshd.sh

@@ -38,7 +38,7 @@ smoke SSH ignore the user's config").
       number of layers the saved image's manifest names and no layer's listing
       fails, no path has a last part that matches `ssh_host_*_key` (a whiteout
       entry `.wh.ssh_host_*_key` does not count).
-- [x] AC2: Two containers started with `docker run` from one image each
+- [ ] AC2: Two containers started with `docker run` from one image each
       present host keys of the types ed25519, ecdsa, and rsa, read from the
       host with `ssh-keyscan`, and for each of the three types the key blob
       (the type and base64 fields, without the host and port) differs between
@@ -60,7 +60,7 @@ smoke SSH ignore the user's config").
       replace `2222` if the user changed `SSHPORT`. No command Step 6 shows
       uses `$`, backticks, pipes, redirects, environment-variable syntax, or an
       unquoted bracket or glob.
-- [x] AC5: `CHANGELOG.md` `[Unreleased]` has an entry stating that the image
+- [ ] AC5: `CHANGELOG.md` `[Unreleased]` has an entry stating that the image
       no longer ships SSH host keys; that a container creates host keys at
       start when none are present, which with `docker-compose.yml` happens
       only when the host-key volume is new; that the volume keeps them the
@@ -139,6 +139,7 @@ smoke SSH ignore the user's config").
 - 2026-11-06: T4 and T5 done: rerun after the last smoke.sh edits, shellcheck and hadolint clean, branch 30 passed 0 failed, main image's layer FAIL line names all three keys; the AC1 check on the CI runner's image store runs on review's push (not yet observed).
 - 2026-11-06: claim audit: 55 claims read, 11 corrected — CHANGELOG.md, README.md, test/smoke.sh (rebuild wording, warning keeps failing until cleared, "same server" not "same container", warning cause, README command no longer names PowerShell since Windows is unrun, layer check messages say file names, host-key FAIL also covers an unread key, header says ed25519, "remove" not "untag", ARG cache rule marked unchecked, image-store claim dropped); re-read by the same reader pending.
 - 2026-11-06: claim audit re-read: all 11 corrected claims true as written; two lines rewrapped (README Step 6, smoke.sh header 14). Status set to review.
+- 2026-11-06: review checkpoint: fix-now work for 15 findings committed (boot key check, smoke test 15, both-container mode check, empty-safe layer loop, streamed save, own rebuild tag, comments and docs); full smoke rerun on the fixed tree still running, not yet verified.
 
 ## Decisions
 
@@ -150,3 +151,42 @@ smoke SSH ignore the user's config").
 - AC4 evidence (2026-11-06, branch at 4462281): in README Step 6 (`awk '/^## Step 6/,0'`), `ssh-host-keys` appears 2 times, `<folder>_ssh-host-keys` 1, "deletes the `ssh-host-keys` volume, so the next start makes new host keys" 1, `ssh-keygen -R "[127.0.0.1]:2222"` 1 (after "If `ssh` warns `REMOTE HOST IDENTIFICATION HAS CHANGED`"), "If you changed `SSHPORT`, replace `2222`" 1; the four commands in Step 6's code blocks hold no `$`, backtick, pipe, redirect, `*`, `?`, `%VAR%`, and no bracket outside the quoted `"[127.0.0.1]:2222"`. PASS.
 - AC5 evidence (2026-11-06, branch at 4462281): CHANGELOG `[Unreleased]` `### Security` entry states the image no longer ships SSH host keys; a container with no host keys creates them, which with `docker-compose.yml` happens only at its first start on a new `ssh-host-keys` volume; the volume keeps them across `down`, `up -d`, and rebuilds; a user who connected before gets a `REMOTE HOST IDENTIFICATION HAS CHANGED` failure until running the `ssh-keygen -R` command README Step 6 shows. PASS.
 - Consistency gate (2026-11-06, at 4462281): `cairn_validate.py` all checks passed (1 advisory: the known `cairn/references/pdf/` ignore-entry WARN, already a candidate row); no DESIGN.md principle line changed, so `cairn_impact` skipped; hadolint v2.15.1 clean; shellcheck v0.11.0 clean on `test/smoke.sh` and `boot-sshd.sh`; `docker build` succeeds (smoke "image builds"); base pinned to the explicit tag `rocker/r2u:24.04`; no secret in `ENV`, `COPY`, or build args, and test 12 shows no host private key in any layer; `.dockerignore` present; CHANGELOG `[Unreleased]` has the entry with no milestone number. PASS.
+- Correction (2026-11-06): the AC2 tick above was premature: the run checked `/etc/ssh/host_keys` owner and mode in one container, and AC2 says "In each container"; AC2 unticked until a run checks both (diff-bug #2). The AC5 tick was premature: AC5 requires stating that users see "one" changed-host-key warning, the entry does not say that, and ssh keeps refusing until the key is removed, so the criterion is wrong (diff-bug #13); AC5 unticked and routed to amendment.
+- spawned: diff-bug, blame-history, prior-review, ripple
+- diff-bug #1: a present but damaged host key passes `[[ -s ]]`, and sshd skips it and starts quietly — fix now (boot checks each key with `ssh-keygen -y` after `chmod 600` and stops with a clear error; test 15).
+- diff-bug #2: the folder owner/mode check covers one container, AC2 says each — fix now (check both).
+- diff-bug #3: an empty layer list aborts under `set -u` on bash 3.2 before the FAIL line — fix now (empty-safe expansion).
+- diff-bug #4: the empty-key branch and a failing key have no test — fix now (test 15: empty key replaced; damaged key stops the boot).
+- diff-bug #5: `LISTED -ne ${#LAYERS[@]}` cannot fire alone, and nothing reads `index.json` — reject (false): every layer `manifest.json` names is listed or counted as failed, which is what AC1 states; T4's "or" names either file.
+- diff-bug #6: AC1 has no CI-store evidence yet — reject (false as a gap): the merge waits on green CI, which runs test 12 on the runner.
+- diff-bug #7: a read-only or chmod-refusing host-key mount fails with a raw `install` error — reject (edge): no documented setup mounts that folder read-only or from the host; the boot still exits non-zero.
+- diff-bug #8: `docker save -o` then `tar -x` holds two copies — fix now (stream `docker save | tar -x`).
+- diff-bug #9: the README misses a cause that recurs: the new image with an old `docker-compose.yml` — fix now (README sentence: a warning after every `up -d` means no `ssh-host-keys` volume, update with `git pull`); `docker run` and a renamed clone folder are outside the documented path.
+- diff-bug #10: `IMAGE2="${IMAGE}-rebuild"` can overwrite and delete a caller's image, or be invalid for a digest — fix now (tag `r2u-ssh-smoke-rebuild:$$`).
+- diff-bug #11: DESIGN stage numbers differ from the Dockerfile's — reject (false): DESIGN's Function Families are its own grouping, and family 3 is "sshd install & config".
+- diff-bug #12: `BASE_DIGEST=smoke-rebuild`, T4 says `smoke` — reject (style): any different value meets AC3.
+- diff-bug #13: AC5's "one changed-host-key warning" is wrong, the CHANGELOG is right — amendment routed (AC5).
+- diff-bug #14: two comments repeat the code — reject (style).
+- diff-bug (c) #1: force-recreate and rebuild host-key checks run the same keep-a-present-key path — reject (planned change): AC3 names both.
+- diff-bug (c) #2: ecdsa and rsa "differ" checks repeat the ed25519 path — reject (planned change): AC2 names each type.
+- diff-bug (c) #3: `down -v` removing the host-key volume tests Docker — reject (planned change): AC3 names it.
+- blame-history #1: `${IMAGE}-rebuild` can touch a user's image — fix now (same fix as diff-bug #10).
+- blame-history #2: `docker volume prune` also deletes the host-key volume with no README note — reject (edge): pruning volumes is outside documented use and its effect is the warning the README already explains.
+- blame-history #3: empty layer list on bash 3.2 — fix now (same as diff-bug #3).
+- blame-history #4: a failed first `compose up` adds a second FAIL for the host-key volume — reject (style): a duplicate FAIL line in an already-failing run.
+- blame-history #5: RSA key creation under emulation could pass the 30 s `wait_for_ssh` budget — reject (edge): CI and the Mac run native, and RSA creation took under a second in every run.
+- blame-history #6: boot-sshd.sh header and Dockerfile stage 5 comment omit host keys — fix now.
+- blame-history #7: the README warning text was seen with plain `ssh`, not Positron — reject (false): the README claims only what `ssh` prints.
+- blame-history #8: GHCR `latest` images still hold baked keys — reject (planned change): a GHCR push is a release the user declares (Scope Out).
+- blame-history #9: rocker's sudo can read the 700 host-key folder — reject (planned change): passwordless sudo is GP1 by design.
+- blame-history #10: CHANGELOG "Now," line wrap — fix now.
+- prior-review #1: the Security entry does not say `down -v` deletes the host-key volume — fix now.
+- prior-review #2: empty layer list on bash 3.2 — fix now (same as diff-bug #3).
+- ripple #1: Dockerfile stage 5 comment — fix now (same as blame-history #6).
+- ripple #2: boot-sshd.sh header — fix now (same as blame-history #6).
+- ripple #3: README feature list says the boot script only prepares `~/.ssh` and starts sshd — fix now.
+- ripple #4: ROADMAP host-key candidate row still open — reject (planned change): post-merge hygiene graduates it.
+- ripple #5: ROADMAP Positron-smoke row lists only the compose home volume among smoke checks — fix now.
+- ripple #6: CHANGELOG Changed entry says `down -v` deletes "that volume" — reject (false): it names the home volume and stays true; the Security entry now covers the host-key volume.
+- ripple #7: smoke.sh section heading "Tests 10 & 11: compose home volume" — fix now.
+- ripple #8: IP2's wording does not name host keys — reject (false): "Nothing sensitive is ever baked into an image layer" covers them.

@@ -6,7 +6,7 @@ This repository builds a Docker image based on [rocker/r2u](https://github.com/r
 - `sudo` installed and configured (NOPASSWD) for the main user
 - `bspm` enabled in R with the sudo backend
 - `git` installed, with `less` as its default pager (no `user.name` or `user.email` is preset, so set your own with `git config --global`)
-- A minimal boot script (`boot-sshd.sh`) that prepares `~/.ssh` and starts `sshd`
+- A minimal boot script (`boot-sshd.sh`) that prepares `~/.ssh`, creates the container's own SSH host keys, and starts `sshd`
 
 The primary purpose of this image is to enable an R environment with Ubuntu Binaries to run in Positron via SSH.
 
@@ -132,7 +132,9 @@ If `ssh` warns `REMOTE HOST IDENTIFICATION HAS CHANGED` and does not connect,
 the server on that port shows a different host key than your computer
 remembers. With this image, that happens after `docker compose down -v`. It
 also happens once after you update from a version of this image that had its
-host keys built in. Remove the old key that your computer remembers, then
+host keys built in. If it happens after every `docker compose up -d`, your
+`docker-compose.yml` has no `ssh-host-keys` volume. Update your clone with
+`git pull` to get it. Remove the old key that your computer remembers, then
 connect again and accept the new key.
 
 In terminal:
