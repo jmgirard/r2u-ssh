@@ -60,3 +60,19 @@ pre-1.0 its runtime interface may change between releases.
 - The container now fails fast at startup with a clear error when no authorized
   key is provided, instead of starting `sshd` anyway and failing confusingly on
   connection later.
+
+### Security
+
+- The image no longer ships SSH host keys. Before, every container made from
+  one image had the same private host keys, and a rebuild that reran the
+  openssh-server install changed them. If a container now starts with no
+  host keys, it creates them. With `docker-compose.yml`, the keys are in the
+  `ssh-host-keys` volume, so a container creates them only at its first start
+  on a new volume. The volume keeps the keys the same across
+  `docker compose down`, `docker compose up -d`, and rebuilds.
+  `docker compose down -v` deletes the volume, so the next start makes new
+  host keys. If a kept host key is damaged, the container stops at start
+  with an error that names the key. If you connected before with the README's SSH setup, your first
+  connection after you update fails with a `REMOTE HOST IDENTIFICATION HAS
+  CHANGED` warning. It keeps failing until you remove the old key with the
+  `ssh-keygen -R` command that README Step 6 shows.

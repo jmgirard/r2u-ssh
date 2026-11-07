@@ -33,8 +33,11 @@ The image provides:
   `/home/rocker` (user files, settings, the Positron server) across
   `docker compose down`. R packages bspm installs as Ubuntu binaries live in
   the system library and are not kept.
+- An `ssh-host-keys` named volume in `docker-compose.yml` that keeps the SSH
+  host keys in `/etc/ssh/host_keys` across `down`, `up`, and rebuilds. The
+  image ships no host keys (IP2).
 - A boot script (`boot-sshd.sh`) that prepares `~/.ssh`/`~/.positron-server`,
-  installs the key, and starts `sshd`.
+  installs the key, creates any missing host key, and starts `sshd`.
 
 **Distribution:** two channels. Clone + `docker compose up --build` is the primary,
 documented path — every user builds fresh against current rocker/r2u. A GHCR tag
@@ -60,11 +63,16 @@ The Dockerfile's numbered stages, each a distinct concern:
 1. **Base + metadata** — `FROM rocker/r2u:24.04`, OCI labels.
 2. **User creation** — non-root `rocker` with `~/.ssh`.
 3. **sshd install & config** — openssh-server plus the Positron server-download
-   deps, git, and less (git's pager); key-only auth via
+   deps, git, and less (git's pager); the install's host keys are deleted in
+   the same `RUN`, and an empty root-only `/etc/ssh/host_keys` is made; key-only
+   auth and the three `HostKey` paths via
    `/etc/ssh/sshd_config.d/zz-container.conf`.
 4. **Boot script** — `/usr/local/bin/boot-sshd.sh` (a `COPY`'d file): resolve
    home, prepare `~/.ssh` and `~/.positron-server`, install the CR-stripped key
-   from mount or env var (fail closed if none), fix ownership, exec `sshd -D -e`.
+   from mount or env var (fail closed if none), fix ownership, set
+   `/etc/ssh/host_keys` to root 700, create any missing ed25519, ecdsa, or
+   rsa host key there, set each key to root 600 and fail closed on one
+   `ssh-keygen -y` cannot read, exec `sshd -D -e`.
 5. **sudo/bspm wiring** — passwordless sudo for `rocker`;
    `options(bspm.sudo = TRUE)` injected into `Rprofile.site`.
 6. **Runtime surface** — `EXPOSE 22`, `CMD` boot script.
@@ -149,7 +157,12 @@ contract is:
   `docker compose down -v` deletes it. Docker fills a new volume from the
   image's `/home/rocker` once, so later image changes to that folder do not
   reach an existing volume. `boot-sshd.sh` rewrites `~/.ssh/authorized_keys` at
-  every boot, so a changed key replaces the old one on a kept volume.
+  every boot, so a changed key replaces the old one on a kept volume. The
+  `ssh-host-keys` named volume at `/etc/ssh/host_keys` holds the SSH host keys;
+  `boot-sshd.sh` creates a key only when it is missing, so the host key stays
+  the same while the volume lasts, and `docker compose down -v` deletes it. A
+  kept key that `ssh-keygen -y` cannot read stops the boot (GP5). A
+  plain `docker run` without that volume gets new host keys per container.
 
 ## Known issues
 

@@ -8,5 +8,7 @@ services:
         - AUTHORIZED_KEYS_B64=${AUTHORIZED_KEYS_B64}
     volumes:
         - home:/home/rocker
+        - ssh-host-keys:/etc/ssh/host_keys
 volumes:
     home:
+    ssh-host-keys:

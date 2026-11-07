@@ -6,7 +6,7 @@ This repository builds a Docker image based on [rocker/r2u](https://github.com/r
 - `sudo` installed and configured (NOPASSWD) for the main user
 - `bspm` enabled in R with the sudo backend
 - `git` installed, with `less` as its default pager (no `user.name` or `user.email` is preset, so set your own with `git config --global`)
-- A minimal boot script (`boot-sshd.sh`) that prepares `~/.ssh` and starts `sshd`
+- A minimal boot script (`boot-sshd.sh`) that prepares `~/.ssh`, creates the container's own SSH host keys, and starts `sshd`
 
 The primary purpose of this image is to enable an R environment with Ubuntu Binaries to run in Positron via SSH.
 
@@ -98,6 +98,13 @@ lowercase. This includes your projects, cloned repositories, your git and shell
 setup files, and the Positron server. When the container is removed, the volume
 stays. Your files are there again the next time you run `docker compose up -d`.
 
+The container's SSH host keys are kept in a second volume. `docker-compose.yml`
+calls it `ssh-host-keys`, and `docker volume ls` usually lists it as
+`<folder>_ssh-host-keys`. The container makes its host keys the first time it
+starts with a new volume. The volume keeps them the same after
+`docker compose down`, `docker compose up -d`, and a rebuild. Your computer
+uses them to make sure that it connects to the same server as before.
+
 R packages that bspm installs as Ubuntu binaries go to a system folder outside
 the home folder, so they are not kept. Each time the container is made new (for
 example after `docker compose down`, or `docker compose up -d --build` after an
@@ -115,7 +122,25 @@ docker compose down --rmi all
 
 To close the container and delete your files, use the command below. Copy out
 any files you want to keep first, because it deletes the `home` volume and every
-file in it:
+file in it. It also deletes the `ssh-host-keys` volume, so the next start makes
+new host keys:
 ```
 docker compose down -v
 ```
+
+If `ssh` warns `REMOTE HOST IDENTIFICATION HAS CHANGED` and does not connect,
+the server on that port shows a different host key than your computer
+remembers. With this image, a new `ssh-host-keys` volume causes it, for
+example after `docker compose down -v`. If your old image had its
+host keys built in, the host key also changes at your first start after you
+update. If it happens after every `docker compose down` and
+`docker compose up -d`, your `docker-compose.yml` has no `ssh-host-keys`
+volume. Update your clone with
+`git pull` to get it. Remove the old key that your computer remembers, then
+connect again and accept the new key.
+
+In terminal:
+```
+ssh-keygen -R "[127.0.0.1]:2222"
+```
+If you changed `SSHPORT`, replace `2222` with your port.
