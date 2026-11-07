@@ -130,9 +130,9 @@ docker compose down -v
 
 If `ssh` warns `REMOTE HOST IDENTIFICATION HAS CHANGED` and does not connect,
 the server on that port shows a different host key than your computer
-remembers. With this image, that happens after `docker compose down -v`. The
-host key also changes when you first update from a version of this image that
-had its host keys built in. If it happens after every `docker compose up -d`, your
+remembers. With this image, that happens after `docker compose down -v`. If
+you update from a version of this image that had its host keys built in, the
+host key also changes at your first start after the update. If it happens after every `docker compose up -d`, your
 `docker-compose.yml` has no `ssh-host-keys` volume. Update your clone with
 `git pull` to get it. Remove the old key that your computer remembers, then
 connect again and accept the new key.
