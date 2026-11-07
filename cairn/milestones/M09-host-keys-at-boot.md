@@ -1,6 +1,6 @@
 # M09: Generate SSH host keys at boot
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** high
 - **Depends on:** —
 - **Driving RR:** —
@@ -138,6 +138,7 @@ smoke SSH ignore the user's config").
 - 2026-11-06: red runs (branch smoke.sh copied in): `origin/main` 23 passed 7 failed (layer hits, all three key types shared, no host-key folder, key changed after the rebuild, no host-key volume; down/up and force-recreate pass there because the key is baked); planted tree (later `RUN rm`, ed25519-only boot, compose without the volume) 23 passed 7 failed (layer hits; no ecdsa or rsa key; key changed after down/up, force-recreate, and rebuild; no host-key volume); the layer FAIL line now prints all hits on one line.
 - 2026-11-06: T4 and T5 done: rerun after the last smoke.sh edits, shellcheck and hadolint clean, branch 30 passed 0 failed, main image's layer FAIL line names all three keys; the AC1 check on the CI runner's image store runs on review's push (not yet observed).
 - 2026-11-06: claim audit: 55 claims read, 11 corrected — CHANGELOG.md, README.md, test/smoke.sh (rebuild wording, warning keeps failing until cleared, "same server" not "same container", warning cause, README command no longer names PowerShell since Windows is unrun, layer check messages say file names, host-key FAIL also covers an unread key, header says ed25519, "remove" not "untag", ARG cache rule marked unchecked, image-store claim dropped); re-read by the same reader pending.
+- 2026-11-06: claim audit re-read: all 11 corrected claims true as written; two lines rewrapped (README Step 6, smoke.sh header 14). Status set to review.
 
 ## Decisions
 

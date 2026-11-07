@@ -24,8 +24,8 @@
 #      (`ssh_host_*_key`), with every layer the saved manifest names listed.
 #  13. Two `docker run` containers each present ed25519, ecdsa, and rsa host
 #      keys, all different between the two; /etc/ssh/host_keys is root 700.
-#  14. With docker-compose.yml, the ed25519 host key stays the same across `down` and
-#      `up`, a force-recreate, and a recreate onto a second image build;
+#  14. With docker-compose.yml, the ed25519 host key stays the same across
+#      `down` and `up`, a force-recreate, and a recreate onto a second build;
 #      `down -v` removes the host-key volume.
 #
 # Usage: test/smoke.sh [image-tag]   (default tag: r2u-ssh:smoke — built here)

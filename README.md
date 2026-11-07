@@ -132,8 +132,8 @@ If `ssh` warns `REMOTE HOST IDENTIFICATION HAS CHANGED` and does not connect,
 the server on that port shows a different host key than your computer
 remembers. With this image, that happens after `docker compose down -v`. It
 also happens once after you update from a version of this image that had its
-host keys built in. Remove the old key that your computer remembers, then connect again
-and accept the new key.
+host keys built in. Remove the old key that your computer remembers, then
+connect again and accept the new key.
 
 In terminal:
 ```
