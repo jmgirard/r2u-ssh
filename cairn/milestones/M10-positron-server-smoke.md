@@ -67,6 +67,7 @@ Make `test/smoke.sh` download, unpack, and start the Positron remote server over
 - 2026-11-06: claim audit: not owed — internal tier.
 - 2026-11-06: implement complete; status review.
 - 2026-11-06: review started; no PR yet, Copilot round off, main not moved since the cut (route d).
+- 2026-11-06: step-7 approval: m10-positron-server-smoke approved for merge
 
 ## Review
 
