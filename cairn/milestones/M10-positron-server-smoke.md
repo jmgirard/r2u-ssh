@@ -40,9 +40,9 @@ Make `test/smoke.sh` download, unpack, and start the Positron remote server over
 
 - [x] T1: Write the source note `cairn/references/positron-server-setup.md` from `posit-dev/positron` `extensions/open-remote-ssh/src/serverSetup.ts` at commit `df65447cf817f972652b0e5526ce1bac7e073dfb`: the default download URL template (line 49), the `uname -m` to arch and arch-long map, the install folder layout, the start command and flags, and the `Extension host agent listening on` line the client waits for. Add its `INDEX.md` line.
 - [ ] T2: Add test 16 to `test/smoke.sh` in its own keyed container. On the host, read the version from `POSITRON_VERSION`, or else from `https://api.github.com/repos/posit-dev/positron/releases/latest` (`tag_name`), sending `Authorization: Bearer $GITHUB_TOKEN` only when that variable is set. Over SSH, map `uname -m` as T1's note records, download with `wget` as Positron does when wget is present, unpack, write a 600 token file, start the server with T1's flags, wait up to about 30 s for the listening line, then `curl` the port inside the container. Capture each step's output in a variable before grepping (M01 lesson). Each step reports its own `bad` line naming the step, with a short tail of its output. Add item 16 to the header comment.
-- [ ] T3: In `.github/workflows/ci.yml`, give the smoke step `env: GITHUB_TOKEN: ${{ github.token }}`. Lint with actionlint from Docker (M04 lesson).
+- [x] T3: In `.github/workflows/ci.yml`, give the smoke step `env: GITHUB_TOKEN: ${{ github.token }}`. Lint with actionlint from Docker (M04 lesson).
 - [ ] T4: Run shellcheck and hadolint from Docker (M03 lesson), then a full local smoke run (arm64). Run with `POSITRON_VERSION` set to an older release. Plant one failure per step in a throwaway worktree copy (M06 lesson): a lookup URL edited to a missing path, a nonexistent `POSITRON_VERSION` (download), a Dockerfile that removes a shared library the server loads (start), and a probe aimed at a closed port (HTTP probe). Each plant must print the FAIL line naming its step. Record the results in the work log.
-- [ ] T5: Update the DESIGN.md Known issues paragraph "Platform-biased testing": the smoke test now also downloads from Posit's CDN and reads GitHub's release API, so a red CI run can come from either site and not the image.
+- [x] T5: Update the DESIGN.md Known issues paragraph "Platform-biased testing": the smoke test now also downloads from Posit's CDN and reads GitHub's release API, so a red CI run can come from either site and not the image.
 
 ## Work log
 
@@ -59,3 +59,6 @@ Make `test/smoke.sh` download, unpack, and start the Positron remote server over
 - 2026-11-06: no changelog entry: test-only change with the image unchanged, as for M07.
 - 2026-11-06: implement started on branch m10-positron-server-smoke, cut from main at 1eb9a6c.
 - 2026-11-06: T1 done: source note positron-server-setup.md and its INDEX line; `${quality}` = `releases` recorded as an observation, since the file does not state it.
+- 2026-11-06: T2 checkpoint (not checked off): test 16 written; bash -n and shellcheck v0.11.0 clean; the remote script is read into a variable with `read -d ''` because macOS bash 3.2 misparses a heredoc with `case` inside `$( )`; full local run pending.
+- 2026-11-06: T3 done: smoke step gets `GITHUB_TOKEN: ${{ github.token }}`; actionlint 1.7.12 clean. The token stays on the runner host: smoke.sh passes only the key to containers.
+- 2026-11-06: T5 done: DESIGN.md Known issues names GitHub's API and Posit's CDN as further sources of red runs.

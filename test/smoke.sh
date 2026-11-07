@@ -30,6 +30,12 @@
 #  15. On a kept host-key folder, an empty key file is replaced at boot, a
 #      damaged key stops the boot with a clear error, and a valid key with
 #      mode 644 is fixed and used.
+#  16. Over SSH as rocker, the Positron server for the container's
+#      architecture downloads from Posit's CDN, unpacks under
+#      ~/.positron-server/bin/, starts, and answers HTTP on its port. The
+#      version is the latest posit-dev/positron release on GitHub, or
+#      POSITRON_VERSION when set. GITHUB_TOKEN, when set, authenticates the
+#      release lookup.
 #
 # Usage: test/smoke.sh [image-tag]   (default tag: r2u-ssh:smoke — built here)
 set -euo pipefail
@@ -544,6 +550,99 @@ if [[ $VOL_OURS -eq 1 ]]; then
     bad "compose down -v left the host-key volume $HKVOL"
   else
     ok "compose down -v removes the host-key volume"
+  fi
+fi
+
+# --- Test 16: Positron server installs and starts over SSH (IP3) -----------
+# The remote steps copy Positron's SSH extension: posit-dev/positron
+# extensions/open-remote-ssh/src/serverSetup.ts at df65447 (download URL
+# template, arch map, wget flags, unpack, start flags, ready line).
+echo "== Positron server (download, unpack, start over SSH) =="
+POSITRON_RELEASE_API="https://api.github.com/repos/posit-dev/positron/releases/latest"
+POS_VER="${POSITRON_VERSION:-}"
+POS_LOOKUP=""
+if [[ -z "$POS_VER" ]]; then
+  POS_AUTH=()
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    POS_AUTH=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+  fi
+  POS_LOOKUP="$(curl -fsSL --retry 3 --connect-timeout 10 ${POS_AUTH[@]+"${POS_AUTH[@]}"} \
+    "$POSITRON_RELEASE_API" 2>&1 || true)"
+  if [[ "$POS_LOOKUP" =~ \"tag_name\":\ *\"([^\"]+)\" ]]; then
+    POS_VER="${BASH_REMATCH[1]}"
+  fi
+fi
+if [[ ! "$POS_VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]]; then
+  bad "Positron server: version lookup failed (got '${POS_VER}'); tail: $(tail -c 160 <<<"$POS_LOOKUP" | tr '\n' ' ')"
+else
+  CID="$(docker run -d -p 127.0.0.1::22 -e "AUTHORIZED_KEYS_B64=${B64}" "$IMAGE")"
+  CONTAINERS+=("$CID")
+  PORT="$(host_port "$CID")"
+  if ! wait_for_ssh "$PORT"; then
+    bad "Positron server: sshd never accepted a connection"
+  else
+    # Each remote step prints "STEP <name>: <detail>" and exits on failure,
+    # or the script ends with "OK <arch> <port> <HTTP status line>". The
+    # script is read into a variable first: bash 3.2 misparses a heredoc
+    # holding `case` patterns inside $( ). read -d '' exits 1 at the end.
+    read -r -d '' POS_SCRIPT <<'REMOTE' || true
+set -u
+V="$1"
+case "$(uname -m)" in
+  x86_64 | amd64)  A=x64;   L=x86_64 ;;
+  arm64 | aarch64) A=arm64; L=arm64 ;;
+  *) echo "STEP download and unpack: unsupported architecture $(uname -m)"; exit 1 ;;
+esac
+D="$HOME/.positron-server"
+S="$D/bin/$V"
+if ! mkdir -p "$S" || ! cd "$S"; then
+  echo "STEP download and unpack: cannot make $S"; exit 1
+fi
+URL="https://cdn.posit.co/positron/releases/reh/$L/positron-reh-linux-$A-$V.tar.gz"
+if ! wget --tries=3 --timeout=10 --no-verbose -O server.tar.gz "$URL" 2>wget.err; then
+  echo "STEP download and unpack: wget $URL failed: $(tail -c 160 wget.err | tr '\n' ' ')"; exit 1
+fi
+if ! tar -xf server.tar.gz --strip-components 1 2>tar.err || [[ ! -x bin/positron-server ]]; then
+  echo "STEP download and unpack: no bin/positron-server after tar: $(tail -c 160 tar.err | tr '\n' ' ')"; exit 1
+fi
+rm -f server.tar.gz
+T="$D/.smoke.token"
+(umask 077 && echo "smoke-token" > "$T")
+LOG="$D/.smoke.log"
+bin/positron-server --start-server --host=127.0.0.1 --port=0 \
+  --connection-token-file "$T" --server-data-dir "$D" \
+  --telemetry-level off --accept-server-license-terms > "$LOG" 2>&1 &
+PID=$!
+P=""
+for _ in $(seq 1 60); do
+  LINE="$(grep -m 1 -E 'Extension host agent listening on [0-9]+' "$LOG" || true)"
+  if [[ -n "$LINE" ]]; then P="${LINE##* }"; break; fi
+  kill -0 "$PID" 2>/dev/null || break
+  sleep 0.5
+done
+if [[ ! "$P" =~ ^[0-9]+$ ]]; then
+  echo "STEP server start: no 'Extension host agent listening on' line; log tail: $(tail -c 200 "$LOG" | tr '\n' ' ')"; exit 1
+fi
+R="$(curl -sS -i --max-time 10 "http://127.0.0.1:$P/" 2>&1 || true)"
+H="${R%%$'\n'*}"
+H="${H%$'\r'}"
+kill "$PID" 2>/dev/null || true
+if [[ ! "$H" =~ ^HTTP/[0-9.]+\ [0-9]{3} ]]; then
+  echo "STEP HTTP probe: no HTTP status line from port $P; got: $(tail -c 160 <<<"$R" | tr '\n' ' ')"; exit 1
+fi
+echo "OK $A $P $H"
+REMOTE
+    POS_OUT="$(ssh_run "$PORT" "bash -s ${POS_VER}" <<<"$POS_SCRIPT" 2>&1 || true)"
+    POS_OK="$(grep -m 1 '^OK ' <<<"$POS_OUT" || true)"
+    POS_STEP="$(grep -m 1 '^STEP ' <<<"$POS_OUT" || true)"
+    if [[ -n "$POS_OK" ]]; then
+      read -r _ POS_ARCH POS_PORT POS_HTTP <<<"$POS_OK"
+      ok "Positron server ${POS_VER} (linux-${POS_ARCH}) downloads, starts, and answers on port ${POS_PORT} (${POS_HTTP})"
+    elif [[ -n "$POS_STEP" ]]; then
+      bad "Positron server ${POS_VER}: ${POS_STEP#STEP }"
+    else
+      bad "Positron server ${POS_VER}: SSH session ended with no result; tail: $(tail -c 160 <<<"$POS_OUT" | tr '\n' ' ')"
+    fi
   fi
 fi
 
