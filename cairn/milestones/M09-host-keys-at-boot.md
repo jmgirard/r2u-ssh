@@ -32,26 +32,26 @@ smoke SSH ignore the user's config").
 
 ## Acceptance criteria
 
-- [ ] AC1: No layer of the built image holds a file named like an SSH host
+- [x] AC1: No layer of the built image holds a file named like an SSH host
       private key: in a listing of the files of every layer of
       `docker save <image>`, where the number of layers listed equals the
       number of layers the saved image's manifest names and no layer's listing
       fails, no path has a last part that matches `ssh_host_*_key` (a whiteout
       entry `.wh.ssh_host_*_key` does not count).
-- [ ] AC2: Two containers started with `docker run` from one image each
+- [x] AC2: Two containers started with `docker run` from one image each
       present host keys of the types ed25519, ecdsa, and rsa, read from the
       host with `ssh-keyscan`, and for each of the three types the key blob
       (the type and base64 fields, without the host and port) differs between
       the two containers. In each container, `/etc/ssh/host_keys` is owned by
       root with mode 700.
-- [ ] AC3: With the repo's `docker-compose.yml` plus an override that changes
+- [x] AC3: With the repo's `docker-compose.yml` plus an override that changes
       only the image tag and its build and pull policy, the ed25519 key blob
       read with `ssh-keyscan` equals the blob read after the first `up -d`,
       after each of `docker compose down` then `up -d`,
       `up -d --force-recreate`, and a recreate onto a second image built from
       the same tree with a different `BASE_DIGEST` build argument.
       `docker compose down -v` removes the host-key volume.
-- [ ] AC4: README Step 6 names the host-key volume both as `ssh-host-keys`
+- [x] AC4: README Step 6 names the host-key volume both as `ssh-host-keys`
       (its name in `docker-compose.yml`) and as `<folder>_ssh-host-keys` (as
       `docker volume ls` lists it); says that `docker compose down -v` deletes
       it and that the next start makes new host keys; and gives
@@ -60,7 +60,7 @@ smoke SSH ignore the user's config").
       replace `2222` if the user changed `SSHPORT`. No command Step 6 shows
       uses `$`, backticks, pipes, redirects, environment-variable syntax, or an
       unquoted bracket or glob.
-- [ ] AC5: `CHANGELOG.md` `[Unreleased]` has an entry stating that the image
+- [x] AC5: `CHANGELOG.md` `[Unreleased]` has an entry stating that the image
       no longer ships SSH host keys; that a container creates host keys at
       start when none are present, which with `docker-compose.yml` happens
       only when the host-key volume is new; that the volume keeps them the
@@ -143,3 +143,10 @@ smoke SSH ignore the user's config").
 ## Decisions
 
 ## Review
+
+- AC1 evidence (2026-11-06, `test/smoke.sh r2u-ssh:m09-review` at 4462281, Docker Desktop 29.9.2, containerd store): test 12 saved the image, read 15 layers from `manifest.json`, listed 15 of 15 with no failed listing, and found no path whose last part matches `ssh_host_*_key` ("PASS: no layer holds a file named ssh_host_*_key (15 layers listed)"); the same check found the three keys in the `origin/main` image and in a planted later-`RUN rm` image (work log). PASS.
+- AC2 evidence (same run): test 13 read ed25519, ecdsa, and rsa key blobs (fields 2-3 of `ssh-keyscan`) from the two `docker run` containers of tests 3 and 4; each type present with the expected key-type prefix in both and different between them (three PASS lines); `/etc/ssh/host_keys` is `root:root 700` by `docker exec stat`. PASS.
+- AC3 evidence (same run): test 14 with `docker-compose.yml` plus an override setting only `image:` and `pull_policy: never` (`up --no-build`): the ed25519 blob equaled the first `up -d`'s after `down` then `up -d`, after `up -d --force-recreate`, and after a recreate onto `r2u-ssh:m09-review-rebuild` built with `--build-arg BASE_DIGEST=smoke-rebuild` (the running container's image confirmed as that tag); `down -v` removed `<project>_ssh-host-keys` (and the home volume). PASS.
+- AC4 evidence (2026-11-06, branch at 4462281): in README Step 6 (`awk '/^## Step 6/,0'`), `ssh-host-keys` appears 2 times, `<folder>_ssh-host-keys` 1, "deletes the `ssh-host-keys` volume, so the next start makes new host keys" 1, `ssh-keygen -R "[127.0.0.1]:2222"` 1 (after "If `ssh` warns `REMOTE HOST IDENTIFICATION HAS CHANGED`"), "If you changed `SSHPORT`, replace `2222`" 1; the four commands in Step 6's code blocks hold no `$`, backtick, pipe, redirect, `*`, `?`, `%VAR%`, and no bracket outside the quoted `"[127.0.0.1]:2222"`. PASS.
+- AC5 evidence (2026-11-06, branch at 4462281): CHANGELOG `[Unreleased]` `### Security` entry states the image no longer ships SSH host keys; a container with no host keys creates them, which with `docker-compose.yml` happens only at its first start on a new `ssh-host-keys` volume; the volume keeps them across `down`, `up -d`, and rebuilds; a user who connected before gets a `REMOTE HOST IDENTIFICATION HAS CHANGED` failure until running the `ssh-keygen -R` command README Step 6 shows. PASS.
+- Consistency gate (2026-11-06, at 4462281): `cairn_validate.py` all checks passed (1 advisory: the known `cairn/references/pdf/` ignore-entry WARN, already a candidate row); no DESIGN.md principle line changed, so `cairn_impact` skipped; hadolint v2.15.1 clean; shellcheck v0.11.0 clean on `test/smoke.sh` and `boot-sshd.sh`; `docker build` succeeds (smoke "image builds"); base pinned to the explicit tag `rocker/r2u:24.04`; no secret in `ENV`, `COPY`, or build args, and test 12 shows no host private key in any layer; `.dockerignore` present; CHANGELOG `[Unreleased]` has the entry with no milestone number. PASS.
