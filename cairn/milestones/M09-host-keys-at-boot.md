@@ -38,7 +38,7 @@ smoke SSH ignore the user's config").
       number of layers the saved image's manifest names and no layer's listing
       fails, no path has a last part that matches `ssh_host_*_key` (a whiteout
       entry `.wh.ssh_host_*_key` does not count).
-- [ ] AC2: Two containers started with `docker run` from one image each
+- [x] AC2: Two containers started with `docker run` from one image each
       present host keys of the types ed25519, ecdsa, and rsa, read from the
       host with `ssh-keyscan`, and for each of the three types the key blob
       (the type and base64 fields, without the host and port) differs between
@@ -198,5 +198,9 @@ smoke SSH ignore the user's config").
 - ripple #7: smoke.sh section heading "Tests 10 & 11: compose home volume" — fix now, fixed b0a53e4.
 - ripple #8: IP2's wording does not name host keys — reject (false): "Nothing sensitive is ever baked into an image layer" covers them.
 - Pass 2 (after the fix-now commit b0a53e4, the AC5 amendment, and doc rewording; branch at 408e357):
+- AC1 evidence (pass 2, `test/smoke.sh r2u-ssh:m09-review` at 408e357, 33 passed 0 failed): test 12 listed 15 of 15 manifest layers (stream `docker save | tar -x`), no failed listing, no path whose last part matches `ssh_host_*_key`. PASS.
+- AC2 evidence (pass 2, same run): ed25519, ecdsa, and rsa blobs present and different between the two `docker run` containers (three PASS lines); `/etc/ssh/host_keys` is `root:root 700` in each of the two containers (two PASS lines). PASS.
+- AC3 evidence (pass 2, same run): ed25519 blob equal to the first `up -d`'s after `down`/`up -d`, `up -d --force-recreate`, and a recreate onto `r2u-ssh-smoke-rebuild:<pid>` (built with `--build-arg BASE_DIGEST=smoke-rebuild`, confirmed running); `down -v` removed the host-key volume. PASS.
+- Consistency gate (pass 2, at 408e357): `cairn_validate.py` all checks passed (same 1 advisory); hadolint and shellcheck clean; build succeeds; base tag pinned; no secret in layers (test 12); `.dockerignore` present; CHANGELOG entry present. PASS.
 - AC4 evidence (pass 2): README Step 6 holds `ssh-host-keys` 3 times, `<folder>_ssh-host-keys` 1, "deletes the `ssh-host-keys` volume, so the next start makes new host keys" 1, `ssh-keygen -R "[127.0.0.1]:2222"` 1 after the `REMOTE HOST IDENTIFICATION HAS CHANGED` paragraph, "If you changed `SSHPORT`, replace `2222`" 1; its four code-block commands hold no banned syntax and no unquoted bracket. PASS.
 - AC5 evidence (pass 2, amended wording): the `### Security` entry states the image no longer ships SSH host keys; a container with no host keys creates them, with `docker-compose.yml` only at its first start on a new `ssh-host-keys` volume; the volume keeps them across `down`, `up -d`, and rebuilds; "If you connected before with the README's SSH setup, your first connection after you update fails with a `REMOTE HOST IDENTIFICATION HAS CHANGED` warning. It keeps failing until you remove the old key with the `ssh-keygen -R` command that README Step 6 shows." PASS.
