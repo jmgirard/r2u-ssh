@@ -73,6 +73,7 @@ Make a CI run that fails because the r2u mirror or Posit's CDN did not answer sa
 - 2026-11-06: claim audit: not owed — internal tier.
 - 2026-11-06: implement complete; status review.
 - 2026-11-06: review started; AC1-AC6 evidence recorded at 33f63b8; consistency gate clean; four-lens review in progress (checkpoint).
+- 2026-11-06: step-7 approval: m11-upstream-outage-rerun approved for merge
 
 ## Decisions
 
