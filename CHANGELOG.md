@@ -71,7 +71,7 @@ pre-1.0 its runtime interface may change between releases.
   on a new volume. The volume keeps the keys the same across
   `docker compose down`, `docker compose up -d`, and rebuilds.
   `docker compose down -v` deletes the volume, so the next start makes new
-  host keys. If you connected before, your first
+  host keys. If you connected before with the README's SSH setup, your first
   connection after you update fails with a `REMOTE HOST IDENTIFICATION HAS
   CHANGED` warning. It keeps failing until you remove the old key with the
   `ssh-keygen -R` command that README Step 6 shows.

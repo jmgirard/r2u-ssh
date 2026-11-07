@@ -142,6 +142,8 @@ smoke SSH ignore the user's config").
 - 2026-11-06: review checkpoint: fix-now work for 15 findings committed (boot key check, smoke test 15, both-container mode check, empty-safe layer loop, streamed save, own rebuild tag, comments and docs); full smoke rerun on the fixed tree still running, not yet verified.
 - 2026-11-06: fixed-tree smoke rerun 33 passed 0 failed (test 15 both checks, mode check in both containers); no smoke volume or rebuild tag left; test 15's red run against c4e9076 (boot without the key check) running.
 - 2026-11-06: amendment routed: AC5 — the criterion promises users see "one" changed-host-key warning, but ssh refuses every connection until the old key is removed (observed on macOS); the CHANGELOG states the real behavior (diff-bug #13).
+- 2026-11-06: test 15 red run against c4e9076 (boot without the key check): 32 passed 1 failed, "a damaged host key did not stop the boot (state 'true 0')", sshd having logged the key as unusable and kept running; the empty-key check passes there, as that code already replaced empty files.
+- 2026-11-06: re-audit: AC5 (full) — proposed clause "connections after updating fail with a changed-host-key warning until the old key is removed, pointing to the README step that removes it": the README step shows a command and removes nothing; the failure holds only with default host-key checking (the README's SSH config); README "happens once after you update" can read as one warning; the current entry would satisfy it. Fixed: pointer now "the README step that shows the command to remove it", clause scoped to "with the README's SSH setup", CHANGELOG and README reworded to match.
 
 ## Decisions
 
