@@ -1,13 +1,13 @@
 # M11: Rerun CI once on an upstream outage
 
-- **Status:** planned
+- **Status:** in-progress
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
 - **Principles touched:** —
 - **Resolves:** —
 - **Surface tier:** internal — CI workflows and the repo's own smoke harness; the image and the README do not change
-- **Branch/PR:** —
+- **Branch/PR:** m11-upstream-outage-rerun
 
 ## Goal
 
@@ -29,7 +29,7 @@ Make a CI run that fails because the r2u mirror or Posit's CDN did not answer sa
 - [ ] AC2: In the Positron server check, a download whose connection to `cdn.posit.co` is refused gets a FAIL line naming that host as unreachable from this runner, and an HTTP 403 or 404 answer gets a FAIL line saying the server for that version is not on Posit's CDN yet. Shown by one `test/smoke.sh` run with `SMOKE_BLOCK_HOSTS=cdn.posit.co` and one with `POSITRON_VERSION=0.0.0-0`.
 - [ ] AC3: The literal `UPSTREAM-UNREACHABLE:` appears in `test/smoke.sh` only in the r2u probe of AC1 and the CDN connect-failure branch of AC2, as `grep -n 'UPSTREAM-UNREACHABLE' test/smoke.sh` lists; the two blocked-host runs of AC1 and AC2 each print one such line naming the blocked host, and the version run of AC2 prints none.
 - [ ] AC4: The decision script of `.github/workflows/ci-rerun.yml` calls `gh run rerun <id> --failed` once for a run that concluded `failure`, is attempt 1, and has a failed-job log holding a line starting `UPSTREAM-UNREACHABLE:`, and makes no rerun call for three other cases: failure, attempt 2, marker; failure, attempt 1, no marker; success. Shown by the script run locally with `gh` replaced by a stub that records its arguments. The workflow's `on:` block is `workflow_run` of the CI workflow with `types: [completed]`, and actionlint passes on it.
-- [ ] AC5: `ci-rerun.yml` declares one top-level `permissions:` block holding only `actions: write` and no job-level `permissions:`, and `ci.yml`'s top-level block stays `contents: read`.
+- [ ] AC5: `ci-rerun.yml` declares one top-level `permissions:` block holding exactly `actions: write` and `contents: read`, and no job in it declares `permissions:`; `ci.yml`'s top-level `permissions:` block is exactly `contents: read`, unchanged from main.
 - [ ] AC6: DESIGN.md's Known issues entry on platform-biased testing states that a CI run failing with an upstream-unreachable line is rerun once, and that this rerun path has not run live, because a `workflow_run` workflow runs only from the default branch.
 
 ## Coverage
@@ -43,10 +43,10 @@ Make a CI run that fails because the r2u mirror or Posit's CDN did not answer sa
 
 ## Tasks
 
-- [ ] T1: In `test/smoke.sh`, add `SMOKE_BLOCK_HOSTS` (space-separated hosts, each passed as `--add-host <host>:127.0.0.1` to the core-contract and Positron containers; CI never sets it). When the bspm check fails (`test/smoke.sh:217`), probe `https://r2u.stat.illinois.edu/ubuntu/` from inside the container with `curl --connect-timeout 10`; on a connect failure print the plain FAIL line and one `UPSTREAM-UNREACHABLE: r2u.stat.illinois.edu` line. Update the header comment.
-- [ ] T2: In the Positron check's remote script (`test/smoke.sh:605-608`), tell a connect failure from an HTTP 403/404 answer in `wget.err`: the first gets the unreachable FAIL detail and an `UPSTREAM-UNREACHABLE: cdn.posit.co` line, the second the "not on Posit's CDN yet" detail. Print the marker from the host side so the grep of AC3 finds it in `test/smoke.sh`.
-- [ ] T3: Add `.github/scripts/ci-rerun.sh` (reads run id, conclusion, attempt; on failure at attempt 1 greps `gh run view <id> --log-failed` for the marker; reruns with `gh run rerun <id> --failed`) and `.github/workflows/ci-rerun.yml` (`workflow_run` of `CI`, `types: [completed]`, `permissions: actions: write`, passes the event fields and `GH_TOKEN`). Add the script to CI's shellcheck step. Test it locally against a stub `gh` on PATH for the four AC4 cases; run actionlint.
-- [ ] T4: Update the DESIGN.md Known issues entry "Platform-biased testing" for the marker and the one rerun, and say the rerun path has not run live.
+- [x] T1: In `test/smoke.sh`, add `SMOKE_BLOCK_HOSTS` (space-separated hosts, each passed as `--add-host <host>:127.0.0.1` to the core-contract and Positron containers; CI never sets it). When the bspm check fails (`test/smoke.sh:217`), probe `https://r2u.stat.illinois.edu/ubuntu/` from inside the container with `curl --connect-timeout 10`; on a connect failure print the plain FAIL line and one `UPSTREAM-UNREACHABLE: r2u.stat.illinois.edu` line. Update the header comment.
+- [x] T2: In the Positron check's remote script (`test/smoke.sh:605-608`), tell a connect failure from an HTTP 403/404 answer in `wget.err`: the first gets the unreachable FAIL detail and an `UPSTREAM-UNREACHABLE: cdn.posit.co` line, the second the "not on Posit's CDN yet" detail. Print the marker from the host side so the grep of AC3 finds it in `test/smoke.sh`.
+- [x] T3: Add `.github/scripts/ci-rerun.sh` (reads run id, conclusion, attempt; on failure at attempt 1 greps `gh run view <id> --log-failed` for the marker; reruns with `gh run rerun <id> --failed`) and `.github/workflows/ci-rerun.yml` (`workflow_run` of `CI`, `types: [completed]`, `permissions: actions: write`, passes the event fields and `GH_TOKEN`). Add the script to CI's shellcheck step. Test it locally against a stub `gh` on PATH for the four AC4 cases; run actionlint.
+- [x] T4: Update the DESIGN.md Known issues entry "Platform-biased testing" for the marker and the one rerun, and say the rerun path has not run live.
 - [ ] T5: Run the full `test/smoke.sh` (expect all PASS), the two blocked-host runs, and the `POSITRON_VERSION=0.0.0-0` run; run shellcheck and hadolint from Docker.
 
 ## Work log
@@ -61,6 +61,14 @@ Make a CI run that fails because the r2u mirror or Posit's CDN did not answer sa
 - 2026-11-06: criteria audit (reduced): 5 findings, all taken toward the narrower promise — AC1/AC2 narrowed to a refused connection; AC3 to the literal in the source; AC4 to its four cases plus the trigger; AC5 to declared blocks. Posit's CDN answers 403 for a missing version (curl, 2026-11-06), so AC2 covers 403 and 404.
 - 2026-11-06: collision check: absorbs part of the candidate row "Keep upstream flakes from failing CI"; archived M04, M07, M10 touched CI but did not add reruns; no D-entry overlaps. Inbox sweep: 0 open issues, 0 open PRs.
 - 2026-11-06: lessons used: 2026-07-17 (M01, used M10) capture before grep; 2026-11-05 (M03, used M10) shellcheck/hadolint from Docker; 2026-11-05 (M04, used M10) actionlint from Docker; 2026-11-05 (M06, used M10) show the red from a worktree; 2026-11-06 (M10) bash 3.2 heredoc and empty arrays; 2026-11-06 (M10) Positron tarball size and 403 token.
+- 2026-11-06: implement started; branch m11-upstream-outage-rerun cut from main at d3eb2d9.
+- 2026-11-06: checked before T1: with `--add-host r2u.stat.illinois.edu:127.0.0.1` on r2u-ssh:m10, bspm's install of uuid errors (no source fallback) and curl to the mirror exits 7.
+- 2026-11-06: T1/T2 choice: the marker literal is printed inline at the two sites (no helper), so AC3's grep lists exactly them; the remote Positron script prints `UNREACHABLE <host>` and the host side turns it into the marker; wget exit 4 is the connect-failure test, exit 8 with `ERROR 403|404` the missing-version test.
+- 2026-11-06: T3 choice: decision logic in `.github/scripts/ci-rerun.sh`, tested by a committed `test/ci-rerun.test.sh` with a stub `gh`; CI runs that test and shellchecks both scripts; the marker is matched after whitespace because `--log-failed` lines open with job, step, and timestamp.
+- 2026-11-06: substantive amendment: AC5 adds `contents: read`, because GitHub sets unlisted permissions to none and the job checks out its script; amended text: "AC5: `ci-rerun.yml` declares one top-level `permissions:` block holding exactly `actions: write` and `contents: read`, and no job in it declares `permissions:`; `ci.yml`'s top-level `permissions:` block is exactly `contents: read`, unchanged from main."
+- 2026-11-06: re-audit: AC5 (reduced) — rationale clause claimed checkout works (unverifiable by reading); "stays" allowed extra keys; both fixed by narrower wording.
+- 2026-11-06: re-audit: AC5 (reduced) — nothing.
+- 2026-11-06: T1-T4 done; shellcheck clean on smoke.sh, boot-sshd.sh, ci-rerun.sh, ci-rerun.test.sh; actionlint clean on both workflows; test/ci-rerun.test.sh 4 of 4 PASS.
 
 ## Decisions
 

@@ -29,7 +29,10 @@ jobs:
         run: docker run --rm -i hadolint/hadolint:v2.15.1 < Dockerfile
 
       - name: Lint shell scripts (shellcheck)
-        run: docker run --rm -v "$PWD:/mnt:ro" koalaman/shellcheck:v0.11.0 /mnt/boot-sshd.sh /mnt/test/smoke.sh
+        run: docker run --rm -v "$PWD:/mnt:ro" koalaman/shellcheck:v0.11.0 /mnt/boot-sshd.sh /mnt/test/smoke.sh /mnt/.github/scripts/ci-rerun.sh /mnt/test/ci-rerun.test.sh
+
+      - name: Test the rerun decision script
+        run: test/ci-rerun.test.sh
 
       - name: Build image and run smoke test
         env:

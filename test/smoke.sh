@@ -37,6 +37,13 @@
 #      POSITRON_VERSION when set. GITHUB_TOKEN, when set, authenticates the
 #      release lookup.
 #
+# When the bspm check fails and the container cannot connect to the r2u
+# mirror, or the Positron download cannot connect to Posit's CDN, the FAIL
+# line says it is an upstream outage and the script also prints a marker
+# line naming the host, for the CI rerun workflow. SMOKE_BLOCK_HOSTS (test
+# only) makes the core-contract and Positron containers resolve the hosts it
+# lists to 127.0.0.1, to show those FAIL lines.
+#
 # Usage: test/smoke.sh [image-tag]   (default tag: r2u-ssh:smoke — built here)
 set -euo pipefail
 
@@ -73,6 +80,17 @@ trap cleanup EXIT
 
 ok()   { printf 'PASS: %s\n' "$1"; PASS=$((PASS + 1)); }
 bad()  { printf 'FAIL: %s\n' "$1"; FAIL=$((FAIL + 1)); }
+
+# A check that fails because an outside site did not answer also prints one
+# marker line naming the host. The CI rerun workflow
+# (.github/workflows/ci-rerun.yml) reruns a failed run once when its log
+# holds that marker.
+
+# Test only (CI never sets it): SMOKE_BLOCK_HOSTS lists hosts, separated by
+# spaces, that the core-contract and Positron containers resolve to
+# 127.0.0.1, so a refused connection stands in for an upstream outage.
+BLOCK_ARGS=()
+for h in ${SMOKE_BLOCK_HOSTS:-}; do BLOCK_ARGS+=(--add-host "$h:127.0.0.1"); done
 
 # Containers publish sshd with `-p 127.0.0.1::22` (empty host port), so Docker
 # picks a free port at bind time; read it back here.
@@ -198,7 +216,7 @@ wait_for_ssh() {  # wait_for_ssh <port> [private-key]   (default: "$WORK/id")
 
 # --- Test 1 & 3: user identity + core contract -----------------------------
 echo "== core contract (keyed run, SSH, bspm) =="
-CID="$(docker run -d -p 127.0.0.1::22 -e "AUTHORIZED_KEYS_B64=${B64}" "$IMAGE")"
+CID="$(docker run -d -p 127.0.0.1::22 ${BLOCK_ARGS[@]+"${BLOCK_ARGS[@]}"} -e "AUTHORIZED_KEYS_B64=${B64}" "$IMAGE")"
 CONTAINERS+=("$CID")
 PORT="$(host_port "$CID")"
 if wait_for_ssh "$PORT"; then
@@ -218,7 +236,15 @@ if wait_for_ssh "$PORT"; then
   if grep -q "NCHAR=36" <<<"$BSPM_OUT"; then
     ok "bspm installs a binary R package (uuid)"
   else
-    bad "bspm install of uuid failed; tail: $(tail -c 120 <<<"$BSPM_OUT")"
+    # bspm gets the binary from the r2u mirror. If the container cannot
+    # connect to it, say so: that is an upstream outage, not an image fault.
+    R2U_HOST="r2u.stat.illinois.edu"
+    if ssh_run "$PORT" "curl -sS -o /dev/null --connect-timeout 10 --max-time 30 https://$R2U_HOST/ubuntu/" >/dev/null 2>&1; then
+      bad "bspm install of uuid failed; tail: $(tail -c 120 <<<"$BSPM_OUT")"
+    else
+      bad "bspm install of uuid failed because the r2u mirror ($R2U_HOST) did not answer from this runner; this is an upstream outage, not an image fault"
+      printf 'UPSTREAM-UNREACHABLE: %s\n' "$R2U_HOST"
+    fi
   fi
   # Test 6: git on rocker's PATH over SSH.
   set +e
@@ -579,7 +605,7 @@ fi
 if [[ ! "$POS_VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]]; then
   bad "Positron server: version lookup failed (got '${POS_VER}'); tail: $(tail -c 160 <<<"$POS_LOOKUP" | tr '\n' ' ')"
 else
-  CID="$(docker run -d -p 127.0.0.1::22 -e "AUTHORIZED_KEYS_B64=${B64}" "$IMAGE")"
+  CID="$(docker run -d -p 127.0.0.1::22 ${BLOCK_ARGS[@]+"${BLOCK_ARGS[@]}"} -e "AUTHORIZED_KEYS_B64=${B64}" "$IMAGE")"
   CONTAINERS+=("$CID")
   PORT="$(host_port "$CID")"
   if ! wait_for_ssh "$PORT"; then
@@ -603,7 +629,16 @@ if ! mkdir -p "$S" || ! cd "$S"; then
   echo "STEP download and unpack: cannot make $S"; exit 1
 fi
 URL="https://cdn.posit.co/positron/releases/reh/$L/positron-reh-linux-$A-$V.tar.gz"
-if ! timeout 900 wget --tries=3 --timeout=10 --no-verbose -O server.tar.gz "$URL" 2>wget.err; then
+timeout 900 wget --tries=3 --timeout=10 --no-verbose -O server.tar.gz "$URL" 2>wget.err
+W=$?
+# wget exits 4 on a network failure (no connection) and 8 on an HTTP error
+# answer; Posit's CDN answers 403 for a version it does not hold.
+if [ "$W" -eq 4 ]; then
+  echo "UNREACHABLE cdn.posit.co"
+  echo "STEP download and unpack: could not connect to cdn.posit.co from this runner; this is an upstream outage, not an image fault: $(tail -c 160 wget.err | tr '\n' ' ')"; exit 1
+elif [ "$W" -eq 8 ] && C="$(grep -oE 'ERROR (403|404)' wget.err | head -n 1)" && [ -n "$C" ]; then
+  echo "STEP download and unpack: the server for $V is not on Posit's CDN yet (HTTP ${C#ERROR }); a new Positron release can take time to appear there"; exit 1
+elif [ "$W" -ne 0 ]; then
   echo "STEP download and unpack: wget $URL failed or passed 900 s: $(tail -c 160 wget.err | tr '\n' ' ')"; exit 1
 fi
 if ! tar -xf server.tar.gz --strip-components 1 2>tar.err || [[ ! -x bin/positron-server ]]; then
@@ -647,6 +682,11 @@ REMOTE
       ok "Positron server ${POS_VER} (linux-${POS_ARCH}) downloads, starts, and answers on port ${POS_PORT} (${POS_HTTP})"
     elif [[ -n "$POS_STEP" ]]; then
       bad "Positron server ${POS_VER}: ${POS_STEP#STEP }"
+      # The remote script prints "UNREACHABLE <host>" when it cannot connect.
+      POS_DOWN="$(grep -m 1 '^UNREACHABLE ' <<<"$POS_OUT" || true)"
+      if [[ -n "$POS_DOWN" ]]; then
+        printf 'UPSTREAM-UNREACHABLE: %s\n' "${POS_DOWN#UNREACHABLE }"
+      fi
     else
       bad "Positron server ${POS_VER}: SSH session ended with no result; tail: $(tail -c 160 <<<"$POS_OUT" | tr '\n' ' ')"
     fi
