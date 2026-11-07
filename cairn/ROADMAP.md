@@ -9,7 +9,7 @@ _Last hygiene check: 2026-11-07 — M10 archived; Positron server smoke row grad
 |---|---|---|---|---|---|
 <!-- rows grouped by status, not sorted by ID; keep only the 5 most recent
      terminal (done or dropped) rows — older ones live in milestones/archive/ + git -->
-| M11 | Rerun CI once on an upstream outage | in-progress | — | normal | milestones/M11-upstream-outage-rerun.md |
+| M11 | Rerun CI once on an upstream outage | review | — | normal | milestones/M11-upstream-outage-rerun.md |
 | M10 | Smoke-test the Positron server install | done | — | normal | milestones/archive/M10-positron-server-smoke.md |
 | M09 | Generate SSH host keys at boot | done | — | high | milestones/archive/M09-host-keys-at-boot.md |
 | M08 | Keep user work across compose down | done | — | high | milestones/archive/M08-home-volume.md |

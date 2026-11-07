@@ -1,6 +1,6 @@
 # M11: Rerun CI once on an upstream outage
 
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** normal
 - **Depends on:** —
 - **Driving RR:** —
@@ -47,7 +47,7 @@ Make a CI run that fails because the r2u mirror or Posit's CDN did not answer sa
 - [x] T2: In the Positron check's remote script (`test/smoke.sh:605-608`), tell a connect failure from an HTTP 403/404 answer in `wget.err`: the first gets the unreachable FAIL detail and an `UPSTREAM-UNREACHABLE: cdn.posit.co` line, the second the "not on Posit's CDN yet" detail. Print the marker from the host side so the grep of AC3 finds it in `test/smoke.sh`.
 - [x] T3: Add `.github/scripts/ci-rerun.sh` (reads run id, conclusion, attempt; on failure at attempt 1 greps `gh run view <id> --log-failed` for the marker; reruns with `gh run rerun <id> --failed`) and `.github/workflows/ci-rerun.yml` (`workflow_run` of `CI`, `types: [completed]`, `permissions: actions: write`, passes the event fields and `GH_TOKEN`). Add the script to CI's shellcheck step. Test it locally against a stub `gh` on PATH for the four AC4 cases; run actionlint.
 - [x] T4: Update the DESIGN.md Known issues entry "Platform-biased testing" for the marker and the one rerun, and say the rerun path has not run live.
-- [ ] T5: Run the full `test/smoke.sh` (expect all PASS), the two blocked-host runs, and the `POSITRON_VERSION=0.0.0-0` run; run shellcheck and hadolint from Docker.
+- [x] T5: Run the full `test/smoke.sh` (expect all PASS), the two blocked-host runs, and the `POSITRON_VERSION=0.0.0-0` run; run shellcheck and hadolint from Docker.
 
 ## Work log
 
@@ -69,6 +69,9 @@ Make a CI run that fails because the r2u mirror or Posit's CDN did not answer sa
 - 2026-11-06: re-audit: AC5 (reduced) — rationale clause claimed checkout works (unverifiable by reading); "stays" allowed extra keys; both fixed by narrower wording.
 - 2026-11-06: re-audit: AC5 (reduced) — nothing.
 - 2026-11-06: T1-T4 done; shellcheck clean on smoke.sh, boot-sshd.sh, ci-rerun.sh, ci-rerun.test.sh; actionlint clean on both workflows; test/ci-rerun.test.sh 4 of 4 PASS.
+- 2026-11-06: T5 done (arm64 Mac, tag r2u-ssh:m11): full smoke 35 passed, 0 failed; SMOKE_BLOCK_HOSTS=r2u.stat.illinois.edu 34/1, bspm FAIL names the mirror plus one marker line; SMOKE_BLOCK_HOSTS=cdn.posit.co 34/1, CDN FAIL plus one marker line; POSITRON_VERSION=0.0.0-0 34/1, "not on Posit's CDN yet (HTTP 403)", no marker; hadolint clean.
+- 2026-11-06: claim audit: not owed — internal tier.
+- 2026-11-06: implement complete; status review.
 
 ## Decisions
 
